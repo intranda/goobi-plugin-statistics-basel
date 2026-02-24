@@ -81,19 +81,28 @@ public class BaselStatisticsPlugin implements IStatisticPlugin {
     @Override
     public void calculate() {
         StringBuilder sql = new StringBuilder();
-        sql.append("SELECT PROZESSEID, TITEL,SORTHELPERIMAGES, SORTHELPERDOCSTRUCTS, SORTHELPERMETADATA FROM PROZESSE WHERE ISTTEMPLATE=FALSE ");
+        sql.append("SELECT PROZESSEID, TITEL,SORTHELPERIMAGES, SORTHELPERDOCSTRUCTS, SORTHELPERMETADATA FROM prozesse ");
 
         String subquery = FilterHelper.criteriaBuilder(filter, false, null, null, null, true, false);
         if (StringUtils.isNotBlank(subquery)) {
-            sql.append(" AND ");
             sql.append(subquery);
         }
 
         if (startDateDate != null) {
-            sql.append("AND ERSTELLUNGSDATUM > '" + dateFormat.format(startDateDate) + "' ");
+            if (sql.toString().endsWith("FROM PROZESSE ")) {
+                sql.append("WHERE ");
+            } else {
+                sql.append("AND ");
+            }
+            sql.append("ERSTELLUNGSDATUM > '" + dateFormat.format(startDateDate) + "' ");
         }
         if (endDateDate != null) {
-            sql.append("AND ERSTELLUNGSDATUM < '" + dateFormat.format(endDateDate) + "' ");
+            if (sql.toString().endsWith("FROM PROZESSE ")) {
+                sql.append("WHERE ");
+            } else {
+                sql.append("AND ");
+            }
+            sql.append("ERSTELLUNGSDATUM < '" + dateFormat.format(endDateDate) + "' ");
         }
         sql.append(";");
         resultList = ControllingManager.getResultsAsMaps(sql.toString());
