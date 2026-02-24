@@ -5,10 +5,15 @@ import java.io.OutputStream;
 import java.text.DateFormat;
 import java.text.SimpleDateFormat;
 import java.util.ArrayList;
+import java.util.Arrays;
 import java.util.Date;
+import java.util.LinkedHashMap;
 import java.util.List;
 import java.util.Map;
 
+import org.apache.commons.configuration.HierarchicalConfiguration;
+import org.apache.commons.configuration.XMLConfiguration;
+import org.apache.commons.configuration.tree.xpath.XPathExpressionEngine;
 import org.apache.commons.lang.StringUtils;
 import org.apache.poi.ss.usermodel.CellType;
 import org.apache.poi.ss.usermodel.Row;
@@ -19,9 +24,11 @@ import org.goobi.production.enums.PluginType;
 import org.goobi.production.flow.statistics.hibernate.FilterHelper;
 import org.goobi.production.plugin.interfaces.IStatisticPlugin;
 
+import de.sub.goobi.config.ConfigPlugins;
 import de.sub.goobi.helper.FacesContextHelper;
 import de.sub.goobi.helper.Helper;
 import de.sub.goobi.persistence.managers.ControllingManager;
+import de.sub.goobi.persistence.managers.StepManager;
 import jakarta.faces.context.FacesContext;
 import jakarta.servlet.http.HttpServletResponse;
 import lombok.Getter;
@@ -62,6 +69,57 @@ public class BaselStatisticsPlugin implements IStatisticPlugin {
     @Getter
     private List<Map<String, String>> resultList;
     private List<String> headerList = new ArrayList<>();
+
+    private List<String> stepnames;
+
+    private Map<String, List<String>> collections;
+    private Map<String, List<String>> columns;
+
+    public List<String> getStepnames() {
+        if (stepnames == null || stepnames.isEmpty()) {
+            stepnames = StepManager.getDistinctStepTitles();
+        }
+        return stepnames;
+    }
+
+    public Map<String, List<String>> getCollections() {
+        if (collections == null) {
+            // first visit, load step names from database, load configuration
+            loadConfiguration();
+        }
+        return collections;
+    }
+
+    public Map<String, List<String>> getColumns() {
+        if (columns == null) {
+            // first visit, load step names from database, load configuration
+            loadConfiguration();
+        }
+        return columns;
+    }
+
+    private void loadConfiguration() {
+
+        XMLConfiguration config = ConfigPlugins.getPluginConfig(title);
+        config.setExpressionEngine(new XPathExpressionEngine());
+
+        collections = new LinkedHashMap<>();
+
+        List<HierarchicalConfiguration> configuredCollections = config.configurationsAt("//category[@name='Sammlungen']/group");
+        for (HierarchicalConfiguration group : configuredCollections) {
+            String groupName = group.getString("@name");
+            List<String> projects = Arrays.asList(group.getStringArray("/project"));
+            collections.put(groupName, projects);
+        }
+
+        columns = new LinkedHashMap<>();
+        List<HierarchicalConfiguration> configuredColumns = config.configurationsAt("//category[@name='Säulen']/group");
+        for (HierarchicalConfiguration group : configuredColumns) {
+            String groupName = group.getString("@name");
+            List<String> projects = Arrays.asList(group.getStringArray("/project"));
+            columns.put(groupName, projects);
+        }
+    }
 
     @Override
     public String getGui() {
