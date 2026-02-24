@@ -37,6 +37,7 @@ import net.xeoh.plugins.base.annotations.PluginImplementation;
 @PluginImplementation
 public class BaselStatisticsPlugin implements IStatisticPlugin {
 
+    private static final long serialVersionUID = -4521526253463061214L;
     @Getter
     private String title = "intranda_statistics_basel";
     @Getter
@@ -88,15 +89,21 @@ public class BaselStatisticsPlugin implements IStatisticPlugin {
             sql.append(subquery);
         }
 
-        if (startDateDate != null) {
+        if (startDateDate != null && endDateDate != null) {
+            if (sql.toString().endsWith("FROM PROZESSE ")) {
+                sql.append("WHERE ");
+            } else {
+                sql.append("AND ");
+            }
+            sql.append("erstellungsdatum between '" + dateFormat.format(startDateDate) + "' and '" + dateFormat.format(endDateDate) + "' ");
+        } else if (startDateDate != null) {
             if (sql.toString().endsWith("FROM PROZESSE ")) {
                 sql.append("WHERE ");
             } else {
                 sql.append("AND ");
             }
             sql.append("ERSTELLUNGSDATUM > '" + dateFormat.format(startDateDate) + "' ");
-        }
-        if (endDateDate != null) {
+        } else if (endDateDate != null) {
             if (sql.toString().endsWith("FROM PROZESSE ")) {
                 sql.append("WHERE ");
             } else {
