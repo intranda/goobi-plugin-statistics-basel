@@ -35,10 +35,10 @@ import net.xeoh.plugins.base.annotations.PluginImplementation;
  */
 @Log4j2
 @PluginImplementation
-public class KickStartStatisticsPlugin implements IStatisticPlugin {
+public class BaselStatisticsPlugin implements IStatisticPlugin {
 
     @Getter
-    private String title = "intranda_statistics_kick_start";
+    private String title = "intranda_statistics_basel";
     @Getter
     private PluginType type = PluginType.Statistics;
 
@@ -64,13 +64,13 @@ public class KickStartStatisticsPlugin implements IStatisticPlugin {
 
     @Override
     public String getGui() {
-        return "/uii/plugin_statistics_kick_start.xhtml";
+        return "/uii/plugin_statistics_basel.xhtml";
     }
 
     /**
      * Generate a list of headers for easier request of specific columns
      */
-    public KickStartStatisticsPlugin() {
+    public BaselStatisticsPlugin() {
         headerList.add("PROZESSEID");
         headerList.add("TITEL");
         headerList.add("SORTHELPERIMAGES");

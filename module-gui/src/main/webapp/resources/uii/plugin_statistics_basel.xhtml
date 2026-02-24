@@ -13,14 +13,14 @@
     xmlns:table="http://goobi.io/table">
 	<script src="template/js/Chart.bundle.min.js"/>
 	<h:panelGroup
-		rendered="#{!LoginForm.hasRole('Plugin_statistics_kick_start')}"
+		rendered="#{!LoginForm.hasRole('Plugin_statistics_basel')}"
 		styleClass="color-box bg-hot text-white d-flex flex-row p-3">
 		<h:outputText
 			styleClass="fw-bold"
-			value="#{msgs.plugin_administration_missingPermission} Plugin_statistics_kick_start" />
+			value="#{msgs.plugin_administration_missingPermission} Plugin_statistics_basel" />
 	</h:panelGroup>
 	
-	<ui:fragment rendered="#{LoginForm.hasRole('Plugin_statistics_kick_start')}">
+	<ui:fragment rendered="#{LoginForm.hasRole('Plugin_statistics_basel')}">
 		<h:form id="form" styleClass="flow" onkeypress="submitOnEnter(event);">
 
 			<div class="row" role="main">

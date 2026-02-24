@@ -11,7 +11,7 @@ import org.junit.Test;
 
 //@RunWith(PowerMockRunner.class)
 //@PowerMockIgnore({ "javax.management.*", "javax.net.ssl.*" ,"jdk.internal.reflect.*"})
-public class KickStartPluginTest {
+public class BaselPluginTest {
 
     private static String resourcesFolder;
 

@@ -5,8 +5,8 @@
 		<exec executable="mvn">
 			<arg value="package"/>
 		</exec>
-		<copy file="module-base/target/plugin-statistics-kick-start-base.jar" todir="/opt/digiverso/goobi/plugins/statistics/" overwrite="true"/>
-		<copy file="module-gui/target/plugin-statistics-kick-start-gui.jar" todir="/opt/digiverso/goobi/plugins/GUI/" overwrite="true"/>
+		<copy file="module-base/target/plugin-statistics-basel-base.jar" todir="/opt/digiverso/goobi/plugins/statistics/" overwrite="true"/>
+		<copy file="module-gui/target/plugin-statistics-basel-gui.jar" todir="/opt/digiverso/goobi/plugins/GUI/" overwrite="true"/>
 	</target>
 
 </project>
