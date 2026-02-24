@@ -1,0 +1,241 @@
+package de.intranda.goobi.plugins;
+
+import java.io.IOException;
+import java.io.OutputStream;
+import java.text.DateFormat;
+import java.text.SimpleDateFormat;
+import java.util.ArrayList;
+import java.util.Date;
+import java.util.List;
+import java.util.Map;
+
+import org.apache.commons.lang.StringUtils;
+import org.apache.poi.ss.usermodel.CellType;
+import org.apache.poi.ss.usermodel.Row;
+import org.apache.poi.ss.usermodel.Sheet;
+import org.apache.poi.ss.usermodel.Workbook;
+import org.apache.poi.xssf.usermodel.XSSFWorkbook;
+import org.goobi.production.enums.PluginType;
+import org.goobi.production.flow.statistics.hibernate.FilterHelper;
+import org.goobi.production.plugin.interfaces.IStatisticPlugin;
+
+import de.sub.goobi.helper.FacesContextHelper;
+import de.sub.goobi.helper.Helper;
+import de.sub.goobi.persistence.managers.ControllingManager;
+import jakarta.faces.context.FacesContext;
+import jakarta.servlet.http.HttpServletResponse;
+import lombok.Getter;
+import lombok.Setter;
+import lombok.extern.log4j.Log4j2;
+import net.xeoh.plugins.base.annotations.PluginImplementation;
+
+/**
+ * @author steffen
+ *
+ */
+@Log4j2
+@PluginImplementation
+public class KickStartStatisticsPlugin implements IStatisticPlugin {
+
+    @Getter
+    private String title = "intranda_statistics_kick_start";
+    @Getter
+    private PluginType type = PluginType.Statistics;
+
+    @Getter
+    @Setter
+    private String filter;
+    @Getter
+    @Setter
+    private Date startDate;
+    @Getter
+    @Setter
+    private Date endDate;
+    @Getter
+    @Setter
+    private Date startDateDate;
+    @Getter
+    @Setter
+    private Date endDateDate;
+    private static DateFormat dateFormat = new SimpleDateFormat("yyyy-MM-dd");
+    @Getter
+    private List<Map<String, String>> resultList;
+    private List<String> headerList = new ArrayList<>();
+
+    @Override
+    public String getGui() {
+        return "/uii/plugin_statistics_kick_start.xhtml";
+    }
+
+    /**
+     * Generate a list of headers for easier request of specific columns
+     */
+    public KickStartStatisticsPlugin() {
+        headerList.add("PROZESSEID");
+        headerList.add("TITEL");
+        headerList.add("SORTHELPERIMAGES");
+        headerList.add("SORTHELPERDOCSTRUCTS");
+        headerList.add("SORTHELPERMETADATA");
+    }
+
+    @Override
+    public void calculate() {
+        StringBuilder sql = new StringBuilder();
+        sql.append("SELECT PROZESSEID, TITEL,SORTHELPERIMAGES, SORTHELPERDOCSTRUCTS, SORTHELPERMETADATA FROM PROZESSE WHERE ISTTEMPLATE=FALSE ");
+
+        String subquery = FilterHelper.criteriaBuilder(filter, false, null, null, null, true, false);
+        if (StringUtils.isNotBlank(subquery)) {
+            sql.append(" AND ");
+            sql.append(subquery);
+        }
+
+        if (startDateDate != null) {
+            sql.append("AND ERSTELLUNGSDATUM > '" + dateFormat.format(startDateDate) + "' ");
+        }
+        if (endDateDate != null) {
+            sql.append("AND ERSTELLUNGSDATUM < '" + dateFormat.format(endDateDate) + "' ");
+        }
+        sql.append(";");
+        resultList = ControllingManager.getResultsAsMaps(sql.toString());
+    }
+
+    @Override
+    public boolean getPermissions() {
+        return true;
+    }
+
+    @Override
+    public String getData() {
+        return null;
+    }
+
+    /**
+     * public method to reset the calculated statistics again
+     */
+    public void resetStatistics() {
+        resultList = null;
+        startDateDate = null;
+        endDateDate = null;
+    }
+
+    /**
+     * public method to allow the export of the entire dataset as Excel file
+     */
+    public void generateExcelDownload() {
+        List<Map<String, String>> myResults = null;
+        List<String> myHeaders = null;
+        if (resultList != null && !resultList.isEmpty()) {
+            myResults = resultList;
+            myHeaders = headerList;
+        } else {
+            Helper.setMeldung("No results to export.");
+            return;
+        }
+        Workbook wb = new XSSFWorkbook();
+        Sheet sheet = wb.createSheet("results");
+
+        // create header
+        Row headerRow = sheet.createRow(0);
+        int columnCounter = 0;
+        for (String headerName : myHeaders) {
+            headerRow.createCell(columnCounter).setCellValue(Helper.getTranslation(headerName));
+            columnCounter = columnCounter + 1;
+        }
+
+        // add results
+        int rowCounter = 1;
+        for (Map<String, String> result : myResults) {
+            Row resultRow = sheet.createRow(rowCounter);
+            columnCounter = 0;
+            for (String headerName : myHeaders) {
+                String val = result.get(headerName);
+                if (StringUtils.isNumeric(val)) {
+                    resultRow.createCell(columnCounter, CellType.NUMERIC).setCellValue(Integer.parseInt(val));
+                } else {
+                    resultRow.createCell(columnCounter).setCellValue(val);
+                }
+                columnCounter++;
+            }
+            rowCounter++;
+        }
+
+        // write result into output stream
+        FacesContext facesContext = FacesContextHelper.getCurrentFacesContext();
+        HttpServletResponse response = (HttpServletResponse) facesContext.getExternalContext().getResponse();
+        OutputStream out;
+        try {
+            out = response.getOutputStream();
+            response.setContentType("application/vnd.ms-excel");
+            response.setHeader("Content-Disposition", "attachment;filename=\"report.xlsx\"");
+            wb.write(out);
+            out.flush();
+            facesContext.responseComplete();
+        } catch (IOException e) {
+            log.error(e);
+        }
+        try {
+            wb.close();
+        } catch (IOException e) {
+            log.error(e);
+        }
+    }
+
+    /**
+     * private method to retrieve specific information from internal result list for chart generation
+     *
+     * @param field String of a column insults of resultlist map
+     * @return JSON String of data for ChartJs-Barchart-Diagramm
+     */
+    private String getChartInfo(String field) {
+        String result = "";
+        if (resultList != null && !resultList.isEmpty()) {
+            for (Map<String, String> t : resultList) {
+                result += "\"" + t.get(field) + "\", ";
+            }
+            if (result.endsWith(", ")) {
+                result = result.substring(0, result.length() - 2);
+            }
+        } else {
+            Helper.setMeldung("No results to export.");
+            return "";
+        }
+        return result;
+    }
+
+    /**
+     * Public method to retrieve the labels for legend
+     *
+     * @return get labels for legend generation
+     */
+    public String getChartLabels() {
+        return getChartInfo("TITEL");
+    }
+
+    /**
+     * Public method to retrieve the number of images per process
+     *
+     * @return get number of images per process
+     */
+    public String getChartValuesImages() {
+        return getChartInfo("SORTHELPERIMAGES");
+    }
+
+    /**
+     * Public method to retrieve the number of docstructs per process
+     *
+     * @return get number of docstructs per process
+     */
+    public String getChartValuesDocstructs() {
+        return getChartInfo("SORTHELPERDOCSTRUCTS");
+    }
+
+    /**
+     * Public method to retrieve the number of metadata per process
+     *
+     * @return get number of metadata per process
+     */
+    public String getChartValuesMetadata() {
+        return getChartInfo("SORTHELPERMETADATA");
+    }
+
+}
