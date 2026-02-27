@@ -1,0 +1,47 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<config_plugin>
+    <category name="Sammlungen">
+        <group name="Handschriften">
+            <project>Kartause</project>
+            <project>Handschriften allgemein</project>
+            <project>E-Codices</project>
+        </group>
+        <group name="Alte Drucke">
+            <project>Inkunabeln allgemein</project>
+            <project>BBK 17</project>
+            <project>BBK 18</project>
+        </group>
+        <group name="SWA">
+            <project>Firmenarchive Sutter &amp; Sutter</project>
+            <project>SWA Archivalien</project>
+        </group>
+        <group name="SWA">
+            <project>Autographensammlung</project>
+            <project>Bernoulli-Briefe</project>
+        </group>
+    </category>
+    <category name="Säulen">
+        <group name="Systematische Digitalisierung">
+            <project>Bernoulli-Briefe</project>
+            <project>Kartause</project>
+            <project>Handschriften allgemein</project>
+            <project>E-Codices</project>
+            <project>Inkunabeln allgemein</project>
+            <project>BBK 17</project>
+            <project>BBK 18</project>
+            <project>Firmenarchive Sutter &amp; Sutter</project>
+            <project>SWA Archivalien</project>
+        </group>
+        <group name="Tintenfraß">
+            <project>Grazer Tisch</project>
+            <project>Cobra</project>
+            <project>Archiv-Scanner</project>
+        </group>
+        <group name="Sicherheitsdigitalisierungen">
+            <project>Autographensammlung</project>
+        </group>
+        <group name="EOD">
+            <project>Kundenaufträge e-rara</project>
+        </group>
+    </category>
+</config_plugin>

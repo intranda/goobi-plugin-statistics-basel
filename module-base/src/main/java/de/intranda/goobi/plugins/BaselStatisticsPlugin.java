@@ -5,10 +5,15 @@ import java.io.OutputStream;
 import java.text.DateFormat;
 import java.text.SimpleDateFormat;
 import java.util.ArrayList;
+import java.util.Arrays;
 import java.util.Date;
+import java.util.LinkedHashMap;
 import java.util.List;
 import java.util.Map;
 
+import org.apache.commons.configuration.HierarchicalConfiguration;
+import org.apache.commons.configuration.XMLConfiguration;
+import org.apache.commons.configuration.tree.xpath.XPathExpressionEngine;
 import org.apache.commons.lang.StringUtils;
 import org.apache.poi.ss.usermodel.CellType;
 import org.apache.poi.ss.usermodel.Row;
@@ -19,9 +24,11 @@ import org.goobi.production.enums.PluginType;
 import org.goobi.production.flow.statistics.hibernate.FilterHelper;
 import org.goobi.production.plugin.interfaces.IStatisticPlugin;
 
+import de.sub.goobi.config.ConfigPlugins;
 import de.sub.goobi.helper.FacesContextHelper;
 import de.sub.goobi.helper.Helper;
 import de.sub.goobi.persistence.managers.ControllingManager;
+import de.sub.goobi.persistence.managers.StepManager;
 import jakarta.faces.context.FacesContext;
 import jakarta.servlet.http.HttpServletResponse;
 import lombok.Getter;
@@ -37,6 +44,7 @@ import net.xeoh.plugins.base.annotations.PluginImplementation;
 @PluginImplementation
 public class BaselStatisticsPlugin implements IStatisticPlugin {
 
+    private static final long serialVersionUID = -4521526253463061214L;
     @Getter
     private String title = "intranda_statistics_basel";
     @Getter
@@ -62,6 +70,57 @@ public class BaselStatisticsPlugin implements IStatisticPlugin {
     private List<Map<String, String>> resultList;
     private List<String> headerList = new ArrayList<>();
 
+    private List<String> stepnames;
+
+    private Map<String, List<String>> collections;
+    private Map<String, List<String>> columns;
+
+    public List<String> getStepnames() {
+        if (stepnames == null || stepnames.isEmpty()) {
+            stepnames = StepManager.getDistinctStepTitles();
+        }
+        return stepnames;
+    }
+
+    public Map<String, List<String>> getCollections() {
+        if (collections == null) {
+            // first visit, load step names from database, load configuration
+            loadConfiguration();
+        }
+        return collections;
+    }
+
+    public Map<String, List<String>> getColumns() {
+        if (columns == null) {
+            // first visit, load step names from database, load configuration
+            loadConfiguration();
+        }
+        return columns;
+    }
+
+    private void loadConfiguration() {
+
+        XMLConfiguration config = ConfigPlugins.getPluginConfig(title);
+        config.setExpressionEngine(new XPathExpressionEngine());
+
+        collections = new LinkedHashMap<>();
+
+        List<HierarchicalConfiguration> configuredCollections = config.configurationsAt("//category[@name='Sammlungen']/group");
+        for (HierarchicalConfiguration group : configuredCollections) {
+            String groupName = group.getString("@name");
+            List<String> projects = Arrays.asList(group.getStringArray("/project"));
+            collections.put(groupName, projects);
+        }
+
+        columns = new LinkedHashMap<>();
+        List<HierarchicalConfiguration> configuredColumns = config.configurationsAt("//category[@name='Säulen']/group");
+        for (HierarchicalConfiguration group : configuredColumns) {
+            String groupName = group.getString("@name");
+            List<String> projects = Arrays.asList(group.getStringArray("/project"));
+            columns.put(groupName, projects);
+        }
+    }
+
     @Override
     public String getGui() {
         return "/uii/plugin_statistics_basel.xhtml";
@@ -81,19 +140,34 @@ public class BaselStatisticsPlugin implements IStatisticPlugin {
     @Override
     public void calculate() {
         StringBuilder sql = new StringBuilder();
-        sql.append("SELECT PROZESSEID, TITEL,SORTHELPERIMAGES, SORTHELPERDOCSTRUCTS, SORTHELPERMETADATA FROM PROZESSE WHERE ISTTEMPLATE=FALSE ");
+        sql.append("SELECT PROZESSEID, TITEL,SORTHELPERIMAGES, SORTHELPERDOCSTRUCTS, SORTHELPERMETADATA FROM prozesse ");
 
         String subquery = FilterHelper.criteriaBuilder(filter, false, null, null, null, true, false);
         if (StringUtils.isNotBlank(subquery)) {
-            sql.append(" AND ");
             sql.append(subquery);
         }
 
-        if (startDateDate != null) {
-            sql.append("AND ERSTELLUNGSDATUM > '" + dateFormat.format(startDateDate) + "' ");
-        }
-        if (endDateDate != null) {
-            sql.append("AND ERSTELLUNGSDATUM < '" + dateFormat.format(endDateDate) + "' ");
+        if (startDateDate != null && endDateDate != null) {
+            if (sql.toString().endsWith("FROM PROZESSE ")) {
+                sql.append("WHERE ");
+            } else {
+                sql.append("AND ");
+            }
+            sql.append("erstellungsdatum between '" + dateFormat.format(startDateDate) + "' and '" + dateFormat.format(endDateDate) + "' ");
+        } else if (startDateDate != null) {
+            if (sql.toString().endsWith("FROM PROZESSE ")) {
+                sql.append("WHERE ");
+            } else {
+                sql.append("AND ");
+            }
+            sql.append("ERSTELLUNGSDATUM > '" + dateFormat.format(startDateDate) + "' ");
+        } else if (endDateDate != null) {
+            if (sql.toString().endsWith("FROM PROZESSE ")) {
+                sql.append("WHERE ");
+            } else {
+                sql.append("AND ");
+            }
+            sql.append("ERSTELLUNGSDATUM < '" + dateFormat.format(endDateDate) + "' ");
         }
         sql.append(";");
         resultList = ControllingManager.getResultsAsMaps(sql.toString());
