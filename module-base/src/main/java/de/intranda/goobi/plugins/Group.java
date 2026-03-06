@@ -14,4 +14,6 @@ public class Group {
 
     private List<Interval> values = new ArrayList<>();
 
+    private List<Interval> totalValues = new ArrayList<>();
+
 }

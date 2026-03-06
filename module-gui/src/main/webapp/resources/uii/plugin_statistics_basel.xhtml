@@ -127,6 +127,12 @@
 
                                             <h:column>
                                                 <f:facet name="header">
+                                                    <h:outputText value="#{msgs.projekt}" />
+                                                </f:facet>
+                                                <h:outputText value="#{item.projektTitle}" />
+                                            </h:column>
+                                            <h:column>
+                                                <f:facet name="header">
                                                     <h:outputText value="#{msgs.zeitraum}" />
                                                 </f:facet>
                                                 <h:outputText value="#{item.date}" />
@@ -136,6 +142,12 @@
                                                     <h:outputText value="#{msgs.pages}" />
                                                 </f:facet>
                                                 <h:outputText value="#{item.pages}" />
+                                            </h:column>
+                                            <h:column>
+                                                <f:facet name="header">
+                                                    <h:outputText value="#{msgs.part}" />
+                                                </f:facet>
+                                                <h:outputText value="#{item.percent}" />
                                             </h:column>
                                             <h:column>
                                                 <f:facet name="header">

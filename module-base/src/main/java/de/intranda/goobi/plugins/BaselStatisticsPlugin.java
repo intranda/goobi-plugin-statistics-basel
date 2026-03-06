@@ -4,12 +4,7 @@ import java.io.IOException;
 import java.io.OutputStream;
 import java.text.DateFormat;
 import java.text.SimpleDateFormat;
-import java.util.ArrayList;
-import java.util.Arrays;
-import java.util.Date;
-import java.util.LinkedHashMap;
-import java.util.List;
-import java.util.Map;
+import java.util.*;
 
 import org.apache.commons.configuration.HierarchicalConfiguration;
 import org.apache.commons.configuration.XMLConfiguration;
@@ -159,8 +154,110 @@ public class BaselStatisticsPlugin implements IStatisticPlugin {
         } else {
             // TODO error, nothing selected
         }
+        calculateStatistics();
+    }
 
-        // TODO do something with data set
+    private void calculateStatistics() {
+        Map<Group, ListIterator<Interval>> listIteratorMap = new HashMap<>();
+        boolean finished = false;
+
+        for (Group group : resultList) {
+            ListIterator<Interval> intervalListIterator = group.getValues().listIterator();
+            listIteratorMap.putIfAbsent(group, intervalListIterator);
+        }
+
+        int finishedCounter = 0;
+        while (!finished) {
+            Interval currentSmallest = getNextSmallestDate(listIteratorMap);
+            List<Interval> intervals = new LinkedList<>();
+            int totalPages = 0;
+            List<Interval> totalIntervals = new LinkedList<>();
+            int pagesForTotalInterval = 0;
+            for (Group key : listIteratorMap.keySet()) {
+                Interval totalInterval = new Interval("total");
+                ListIterator<Interval> intervalListIterator = listIteratorMap.get(key);
+                boolean foundAll = false;
+                Interval interval;
+
+                List<Interval> tempIntervals = new LinkedList<>();
+                while (!foundAll) {
+                    if (intervalListIterator.hasNext()) {
+                        // erstelle 0 Objekte, wenn nötig
+                        interval = intervalListIterator.next();
+                        if (interval.getDate().compareTo(currentSmallest.getDate()) > 0) {
+                            intervalListIterator.previous();
+                            foundAll = true;
+                        } else {
+                            // addiere Objekte auf
+                            tempIntervals.add(interval);
+                            totalPages += interval.getPages();
+                            totalInterval.setPages(totalInterval.getPages() + interval.getPages());
+                            totalInterval.setProcesses(totalInterval.getProcesses() + interval.getProcesses());
+                            totalInterval.setDate(interval.getDate());
+                        }
+                    } else {
+                        finishedCounter++;
+                        if (finishedCounter == listIteratorMap.size()) {
+                            finished = true;
+                        }
+                        foundAll = true;
+                    }
+                }
+
+                addEmptyObjectToMissingProjects(key, tempIntervals, intervalListIterator, currentSmallest);
+                totalIntervals.add(totalInterval);
+                pagesForTotalInterval += totalInterval.getPages();
+                key.getTotalValues().add(totalInterval);
+                intervals.addAll(tempIntervals);
+                if (finished) {
+                    break;
+                }
+            }
+
+            for (Interval totalInterval : totalIntervals) {
+                totalInterval.setPercent(totalInterval.getPages() / (float) pagesForTotalInterval);
+            }
+            for (Interval interval : intervals) {
+                interval.setPercent(interval.getPages() / (float) totalPages);
+            }
+
+            finishedCounter = 0;
+        }
+    }
+
+    private void addEmptyObjectToMissingProjects(Group key, List<Interval> tempIntervals, ListIterator<Interval> intervalListIterator, Interval currentSmallest) {
+        List<String> projectNames = collections.get(key.getName());
+        boolean foundName = false;
+        for (String projectName : projectNames) {
+            foundName = false;
+            for (Interval tempInterval : tempIntervals) {
+                if (tempInterval.getProjektTitle().equals(projectName)) {
+                    foundName = true;
+                    break;
+                }
+            }
+            if (!foundName) {
+                intervalListIterator.add(new Interval(projectName, currentSmallest.getDate(), 0,0,0));
+            }
+        }
+    }
+
+    private Interval getNextSmallestDate(Map<Group, ListIterator<Interval>> listIteratorMap) {
+        Interval currentInterval = null;
+        Interval tempInterval = null;
+        for (Group key : listIteratorMap.keySet()) {
+            ListIterator<Interval> intervalListIterator = listIteratorMap.get(key);
+            if (intervalListIterator.hasNext()) {
+                tempInterval = intervalListIterator.next();
+                intervalListIterator.previous();
+            } else {
+                continue;
+            }
+            if (currentInterval == null || currentInterval.getDate().compareTo(tempInterval.getDate()) > 0) {
+                currentInterval = tempInterval;
+            }
+        }
+        return currentInterval;
     }
 
     private Group getValuesFromDatabase(List<String> projects) {
@@ -173,8 +270,8 @@ public class BaselStatisticsPlugin implements IStatisticPlugin {
         }
 
         StringBuilder sql = new StringBuilder();
-        sql.append("SELECT SUM(sortHelperImages) as pages, COUNT(sortHelperImages) as processes, ");
-        sql.append("CONCAT(YEAR(BearbeitungsEnde), '/', MONTH(BearbeitungsEnde)) AS finishDate ");
+        sql.append("SELECT projekte.titel as titel, SUM(sortHelperImages) as pages, COUNT(sortHelperImages) as processes, ");
+        sql.append("DATE_FORMAT(BearbeitungsEnde, '%Y/%m') AS finishDate ");
         sql.append("FROM schritte LEFT JOIN prozesse ON schritte.ProzesseID = prozesse.ProzesseID ");
         sql.append("LEFT JOIN projekte ON prozesse.ProjekteID = projekte.ProjekteID ");
         sql.append("WHERE schritte.titel = '").append(selectedStepName).append("' ");
@@ -190,7 +287,8 @@ public class BaselStatisticsPlugin implements IStatisticPlugin {
             sql.append("BearbeitungsEnde < '").append(dateFormat.format(endDateDate)).append("' ");
         }
         sql.append("AND projekte.titel IN ( ").append(projectString.toString()).append(") ");
-        sql.append("GROUP BY finishDate ");
+        sql.append("GROUP BY titel, finishDate ");
+        sql.append("ORDER BY finishDate");
 
         @SuppressWarnings("unchecked")
         List<Object> results = ProcessManager.runSQL(sql.toString());
@@ -199,13 +297,14 @@ public class BaselStatisticsPlugin implements IStatisticPlugin {
 
         for (Object rowObj : results) {
             Object[] row = (Object[]) rowObj;
-            String pages = (String) row[0];
-            String processes = (String) row[1];
-            String date = (String) row[2];
+            String projectTitle = (String) row[0];
+            String pages = (String) row[1];
+            String processes = (String) row[2];
+            String date = (String) row[3];
 
             //  System.out.println(date + ": " + pages + " " + processes);
 
-            Interval interval = new Interval(date, Integer.parseInt(pages), Integer.parseInt(processes));
+            Interval interval = new Interval(projectTitle, date, Integer.parseInt(pages), Integer.parseInt(processes), 0);
             group.getValues().add(interval);
         }
 
