@@ -11,7 +11,7 @@ import lombok.Setter;
 @RequiredArgsConstructor
 public class Interval {
 
-    private final String projektTitle;
+    private String projektTitle;
 
     private String date;
 
@@ -21,4 +21,7 @@ public class Interval {
 
     private float percent;
 
+    public Interval(String projektTitle) {
+        this.projektTitle = projektTitle;
+    }
 }

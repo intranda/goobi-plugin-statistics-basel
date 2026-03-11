@@ -1,30 +1,22 @@
 package de.intranda.goobi.plugins;
 
-import java.io.IOException;
-import java.io.OutputStream;
-import java.text.DateFormat;
-import java.text.SimpleDateFormat;
-import java.util.*;
-
-import org.apache.commons.configuration.HierarchicalConfiguration;
-import org.apache.commons.configuration.XMLConfiguration;
-import org.apache.commons.configuration.tree.xpath.XPathExpressionEngine;
-import org.apache.commons.lang3.StringUtils;
-import org.apache.poi.ss.usermodel.Workbook;
-import org.apache.poi.xssf.usermodel.XSSFWorkbook;
-import org.goobi.production.enums.PluginType;
-import org.goobi.production.plugin.interfaces.IStatisticPlugin;
-
 import de.sub.goobi.config.ConfigPlugins;
-import de.sub.goobi.helper.FacesContextHelper;
 import de.sub.goobi.persistence.managers.ProcessManager;
 import de.sub.goobi.persistence.managers.StepManager;
-import jakarta.faces.context.FacesContext;
-import jakarta.servlet.http.HttpServletResponse;
 import lombok.Getter;
 import lombok.Setter;
 import lombok.extern.log4j.Log4j2;
 import net.xeoh.plugins.base.annotations.PluginImplementation;
+import org.apache.commons.configuration.HierarchicalConfiguration;
+import org.apache.commons.configuration.XMLConfiguration;
+import org.apache.commons.configuration.tree.xpath.XPathExpressionEngine;
+import org.apache.commons.lang3.StringUtils;
+import org.goobi.production.enums.PluginType;
+import org.goobi.production.plugin.interfaces.IStatisticPlugin;
+
+import java.text.DateFormat;
+import java.text.SimpleDateFormat;
+import java.util.*;
 
 @Log4j2
 @PluginImplementation
@@ -51,7 +43,7 @@ public class BaselStatisticsPlugin implements IStatisticPlugin {
     @Getter
     @Setter
     private Date endDateDate;
-    private static DateFormat dateFormat = new SimpleDateFormat("yyyy-MM-dd");
+    private final static DateFormat dateFormat = new SimpleDateFormat("yyyy-MM-dd");
 
     private List<String> stepnames;
 
@@ -67,10 +59,13 @@ public class BaselStatisticsPlugin implements IStatisticPlugin {
     private String selectedType;
 
     @Getter
-    private String[] possibleTypes = { "Sammlungen", "Säulen" };
+    private final String[] possibleTypes = { "Sammlungen", "Säulen" };
 
     @Getter
     private List<Group> resultList;
+
+    @Getter
+    private final Set<String> dates = new HashSet<>();
 
     public List<String> getStepnames() {
         if (stepnames == null || stepnames.isEmpty()) {
@@ -175,6 +170,7 @@ public class BaselStatisticsPlugin implements IStatisticPlugin {
             int pagesForTotalInterval = 0;
             for (Group key : listIteratorMap.keySet()) {
                 Interval totalInterval = new Interval("total");
+                totalInterval.setDate(currentSmallest.getDate());
                 ListIterator<Interval> intervalListIterator = listIteratorMap.get(key);
                 boolean foundAll = false;
                 Interval interval;
@@ -193,7 +189,6 @@ public class BaselStatisticsPlugin implements IStatisticPlugin {
                             totalPages += interval.getPages();
                             totalInterval.setPages(totalInterval.getPages() + interval.getPages());
                             totalInterval.setProcesses(totalInterval.getProcesses() + interval.getProcesses());
-                            totalInterval.setDate(interval.getDate());
                         }
                     } else {
                         finishedCounter++;
@@ -203,7 +198,6 @@ public class BaselStatisticsPlugin implements IStatisticPlugin {
                         foundAll = true;
                     }
                 }
-
                 addEmptyObjectToMissingProjects(key, tempIntervals, intervalListIterator, currentSmallest);
                 totalIntervals.add(totalInterval);
                 pagesForTotalInterval += totalInterval.getPages();
@@ -220,24 +214,27 @@ public class BaselStatisticsPlugin implements IStatisticPlugin {
             for (Interval interval : intervals) {
                 interval.setPercent(interval.getPages() / (float) totalPages);
             }
-
+            // store dates for a more efficient excel export
+            dates.add(currentSmallest.getDate());
             finishedCounter = 0;
         }
     }
 
-    private void addEmptyObjectToMissingProjects(Group key, List<Interval> tempIntervals, ListIterator<Interval> intervalListIterator, Interval currentSmallest) {
+    private void addEmptyObjectToMissingProjects(Group key, List<Interval> tempIntervals, ListIterator<Interval> intervalListIterator,
+            Interval currentSmallest) {
         List<String> projectNames = collections.get(key.getName());
         boolean foundName = false;
         for (String projectName : projectNames) {
             foundName = false;
             for (Interval tempInterval : tempIntervals) {
-                if (tempInterval.getProjektTitle().equals(projectName)) {
+                if (tempInterval.getProjektTitle().equalsIgnoreCase(projectName)) {
                     foundName = true;
+                    tempInterval.setProjektTitle(projectName);
                     break;
                 }
             }
             if (!foundName) {
-                intervalListIterator.add(new Interval(projectName, currentSmallest.getDate(), 0,0,0));
+                intervalListIterator.add(new Interval(projectName, currentSmallest.getDate(), 0, 0, 0));
             }
         }
     }
@@ -335,54 +332,6 @@ public class BaselStatisticsPlugin implements IStatisticPlugin {
      * public method to allow the export of the entire dataset as Excel file
      */
     public void generateExcelDownload() {
-
-        Workbook wb = new XSSFWorkbook();
-        //        Sheet sheet = wb.createSheet("results");
-        //
-        //        // create header
-        //        Row headerRow = sheet.createRow(0);
-        //        int columnCounter = 0;
-        //        for (String headerName : myHeaders) {
-        //            headerRow.createCell(columnCounter).setCellValue(Helper.getTranslation(headerName));
-        //            columnCounter = columnCounter + 1;
-        //        }
-        //
-        //        // add results
-        //        int rowCounter = 1;
-        //        for (Map<String, String> result : myResults) {
-        //            Row resultRow = sheet.createRow(rowCounter);
-        //            columnCounter = 0;
-        //            for (String headerName : myHeaders) {
-        //                String val = result.get(headerName);
-        //                if (StringUtils.isNumeric(val)) {
-        //                    resultRow.createCell(columnCounter, CellType.NUMERIC).setCellValue(Integer.parseInt(val));
-        //                } else {
-        //                    resultRow.createCell(columnCounter).setCellValue(val);
-        //                }
-        //                columnCounter++;
-        //            }
-        //            rowCounter++;
-        //        }
-
-        // write result into output stream
-        FacesContext facesContext = FacesContextHelper.getCurrentFacesContext();
-        HttpServletResponse response = (HttpServletResponse) facesContext.getExternalContext().getResponse();
-        OutputStream out;
-        try {
-            out = response.getOutputStream();
-            response.setContentType("application/vnd.ms-excel");
-            response.setHeader("Content-Disposition", "attachment;filename=\"report.xlsx\"");
-            wb.write(out);
-            out.flush();
-            facesContext.responseComplete();
-        } catch (IOException e) {
-            log.error(e);
-        }
-        try {
-            wb.close();
-        } catch (IOException e) {
-            log.error(e);
-        }
+        new ExcelCreator(resultList, dates, selectedType).execute();
     }
-
 }
