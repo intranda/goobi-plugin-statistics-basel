@@ -1,6 +1,7 @@
 package de.intranda.goobi.plugins;
 
 import de.sub.goobi.config.ConfigPlugins;
+import de.sub.goobi.helper.Helper;
 import de.sub.goobi.persistence.managers.ProcessManager;
 import de.sub.goobi.persistence.managers.StepManager;
 import lombok.Getter;
@@ -17,6 +18,7 @@ import org.goobi.production.plugin.interfaces.IStatisticPlugin;
 import java.text.DateFormat;
 import java.text.SimpleDateFormat;
 import java.util.*;
+import java.util.stream.Collectors;
 
 @Log4j2
 @PluginImplementation
@@ -125,9 +127,12 @@ public class BaselStatisticsPlugin implements IStatisticPlugin {
     @Override
     public void calculate() {
         resultList = new ArrayList<>();
-        if (StringUtils.isBlank(selectedStepName) && StringUtils.isBlank(selectedType)) {
+        if (StringUtils.isBlank(selectedStepName) || StringUtils.isBlank(selectedType)) {
             // abort, nothing selected
             // TODO show error message
+            String errorText = "Error: Please select one of the options: " + String.join(", ", possibleTypes) + ".";
+            Helper.setFehlerMeldung(errorText);
+            log.error(errorText, selectedType);
             return;
         }
 
@@ -147,7 +152,17 @@ public class BaselStatisticsPlugin implements IStatisticPlugin {
                 resultList.add(group);
             }
         } else {
-            // TODO error, nothing selected
+            String errorText = "Error: Please select one of the options: " + String.join(", ", possibleTypes) + ".";
+            Helper.setFehlerMeldung(errorText);
+            log.error(errorText, selectedType);
+        }
+        // check if data is found
+        if (resultList.stream().mapToLong(group -> group.getValues().size()).sum() == 0) {
+            String errorText = "Error: No data found.";
+            Helper.setFehlerMeldung(errorText);
+            log.error(errorText);
+            resultList = null;
+            return;
         }
         calculateStatistics();
     }
