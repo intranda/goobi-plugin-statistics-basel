@@ -16,4 +16,11 @@ public class Group {
 
     private List<Interval> totalValues = new ArrayList<>();
 
+    public int getTotalPages() {
+        return values.stream().mapToInt(Interval::getPages).sum();
+    }
+
+    public int getTotalProcesses() {
+        return values.stream().mapToInt(Interval::getProcesses).sum();
+    }
 }
