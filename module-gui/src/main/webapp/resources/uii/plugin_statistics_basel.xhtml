@@ -74,24 +74,35 @@
 
                         </section:body>
                         <section:footer>
-                            <!-- Generate the statistics or cancel again -->
-                            <button:row>
+                            <div class="d-flex justify-content-between align-items-center w-100">
                                 <h:commandButton
-                                    styleClass="btn btn-blank"
-                                    id="cancel"
-                                    title="#{msgs.abbrechen}"
-                                    action="#{StatisticalQuestionBean.currentPlugin.resetStatistics}"
-                                    value="#{msgs.abbrechen}">
-                                </h:commandButton>
-                                <h:commandButton
-                                    styleClass="btn btn-primary submitOnEnter"
-                                    id="myStatisticButton"
+                                    class="btn btn-secondary"
+                                    id="excelDownload"
                                     type="submit"
-                                    title="#{msgs.calculateStatistics}"
-                                    action="#{StatisticalQuestionBean.calculate}"
-                                    value="#{msgs.calculateStatistics}">
-                                </h:commandButton>
-                            </button:row>
+                                    title="#{msgs.download_excel}"
+                                    action="#{StatisticalQuestionBean.currentPlugin.generateExcelDownload}"
+                                    rendered="#{StatisticalQuestionBean.currentPlugin.resultList != null}"
+                                    value="#{msgs.download_excel}"/>
+                                <div class="ms-auto">
+                                    <button:row>
+                                        <h:commandButton
+                                            styleClass="btn btn-blank"
+                                            id="cancel"
+                                            title="#{msgs.abbrechen}"
+                                            action="#{StatisticalQuestionBean.currentPlugin.resetStatistics}"
+                                            value="#{msgs.abbrechen}">
+                                        </h:commandButton>
+                                        <h:commandButton
+                                            styleClass="btn btn-primary submitOnEnter"
+                                            id="myStatisticButton"
+                                            type="submit"
+                                            title="#{msgs.calculateStatistics}"
+                                            action="#{StatisticalQuestionBean.calculate}"
+                                            value="#{msgs.calculateStatistics}">
+                                        </h:commandButton>
+                                    </button:row>
+                                </div>
+                            </div>
                         </section:footer>
                     </section:section>
                 </div>
@@ -99,85 +110,48 @@
 
             <!-- ###################### result table ###################### -->
             <h:panelGroup rendered="#{StatisticalQuestionBean.currentPlugin.resultList != null}">
-                <h:outputText value="#{StatisticalQuestionBean.currentPlugin.html}" escape="false"/>
-<!--                <div class="row">-->
-<!--                    <div class="col-sm-12">-->
-<!--                        <section:section type="outline">-->
-<!--                            <section:header-->
-<!--                                icon="table"-->
-<!--                                title="#{msgs.ergebnisse}" />-->
-<!--                            <section:body>-->
-<!--                                <table:wrapper>-->
-<!--                                    <table:search>-->
-<!--                                        <table:hits>-->
-<!--                                            <h:outputText value="#{msgs.treffer}: #{StatisticalQuestionBean.currentPlugin.resultList.size()}" />-->
-<!--                                        </table:hits>-->
-<!--                                    </table:search>-->
+                <div class="row">
+                    <div class="col-sm-12">
+                        <section:section type="outline">
+                            <section:header
+                                icon="table"
+                                title="#{msgs.ergebnisse}" />
+                            <section:body>
+                                <div style="overflow-x: auto;">
+                                <p:dataTable
+                                    id="resultTable"
+                                    value="#{StatisticalQuestionBean.currentPlugin.tableRows}"
+                                    var="row"
+                                    styleClass="table table-bordered table-sm"
+                                    style="width: auto;"
+                                    rowStyleClass="#{row.separator ? 'stats-separator' : (row.bold ? 'fw-bold' : '')}"
+                                    resizableColumns="false">
 
-<!--                                    <ui:repeat-->
-<!--                                        var="group"-->
-<!--                                        value="#{StatisticalQuestionBean.currentPlugin.resultList}">-->
-<!--                                        <h:outputText value="#{group.name}" />-->
-<!--                                        <h:dataTable-->
-<!--                                            id="results"-->
-<!--                                            styleClass="table table-hover table-nomargin dataTable table-bordered responsive"-->
-<!--                                            var="item"-->
-<!--                                            value="#{group.values}">-->
+                                    <p:column headerText="#{StatisticalQuestionBean.currentPlugin.selectedType}">
+                                        <ui:fragment rendered="#{row.bold}"><b><h:outputText value="#{row.groupLabel}" /></b></ui:fragment>
+                                        <h:outputText value="#{row.groupLabel}" rendered="#{!row.bold}" />
+                                    </p:column>
 
+                                    <p:column headerText="#{msgs.projekte}">
+                                        <ui:fragment rendered="#{row.bold}"><b><h:outputText value="#{row.projectLabel}" /></b></ui:fragment>
+                                        <h:outputText value="#{row.projectLabel}" rendered="#{!row.bold}" />
+                                    </p:column>
 
+                                    <p:columns
+                                        value="#{StatisticalQuestionBean.currentPlugin.tableColumns}"
+                                        var="col"
+                                        headerText="#{StatisticalQuestionBean.currentPlugin.columnHeaders[col]}">
+                                        <ui:fragment rendered="#{row.bold}"><b><h:outputText value="#{row.cells[col]}" /></b></ui:fragment>
+                                        <h:outputText value="#{row.cells[col]}" rendered="#{!row.bold}" />
+                                    </p:columns>
 
-<!--                                            <h:column>-->
-<!--                                                <f:facet name="header">-->
-<!--                                                    <h:outputText value="#{msgs.projekt}" />-->
-<!--                                                </f:facet>-->
-<!--                                                <h:outputText value="#{item.projektTitle}" />-->
-<!--                                            </h:column>-->
-<!--                                            <h:column>-->
-<!--                                                <f:facet name="header">-->
-<!--                                                    <h:outputText value="#{msgs.zeitraum}" />-->
-<!--                                                </f:facet>-->
-<!--                                                <h:outputText value="#{item.date}" />-->
-<!--                                            </h:column>-->
-<!--                                            <h:column>-->
-<!--                                                <f:facet name="header">-->
-<!--                                                    <h:outputText value="#{msgs.pages}" />-->
-<!--                                                </f:facet>-->
-<!--                                                <h:outputText value="#{item.pages}" />-->
-<!--                                            </h:column>-->
-<!--                                            <h:column>-->
-<!--                                                <f:facet name="header">-->
-<!--                                                    <h:outputText value="#{msgs.part}" />-->
-<!--                                                </f:facet>-->
-<!--                                                <h:outputText value="#{item.percent}" />-->
-<!--                                            </h:column>-->
-<!--                                            <h:column>-->
-<!--                                                <f:facet name="header">-->
-<!--                                                    <h:outputText value="#{msgs.aktuelleProzesse}" />-->
-<!--                                                </f:facet>-->
-<!--                                                <h:outputText value="#{item.processes}" />-->
-<!--                                            </h:column>-->
-<!--                                           -->
-<!--                                        </h:dataTable>-->
-<!--                                    </ui:repeat>-->
-<!--                                </table:wrapper>-->
-<!--                            </section:body>-->
-<!--                            <section:footer>-->
-<!--                                <button:row>-->
-<!--                                    <h:commandButton-->
-<!--                                        styleClass="btn btn-primary"-->
-<!--                                        id="excelDownload"-->
-<!--                                        type="submit"-->
-<!--                                        title="#{msgs.download_excel}"-->
-<!--                                        action="#{StatisticalQuestionBean.currentPlugin.generateExcelDownload}"-->
-<!--                                        value="#{msgs.download_excel}">-->
-<!--                                    </h:commandButton>-->
-<!--                                </button:row>-->
-<!--                            </section:footer>-->
-<!--                        </section:section>-->
-<!--                    </div>-->
-<!--                </div>-->
+                                </p:dataTable>
+                                </div>
+                            </section:body>
+                        </section:section>
+                    </div>
+                </div>
             </h:panelGroup>
-            <!-- ###################### // result table ###################### -->
 
             <!-- ###################### Bar chart ###################### -->
             <!-- 

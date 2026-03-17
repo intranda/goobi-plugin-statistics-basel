@@ -50,52 +50,6 @@ public class ExcelCreator {
         percentFormat = wb.createDataFormat().getFormat("0.00%");
     }
 
-    public String convertSheetToHtml() {
-        FormulaEvaluator evaluator = wb.getCreationHelper().createFormulaEvaluator();
-        DataFormatter formatter = new DataFormatter();
-
-        StringBuilder html = new StringBuilder();
-        html.append("<table border='1'>");
-
-        for (Row row : sheet) {
-            html.append("<tr>");
-
-            for (Cell cell : row) {
-                html.append("<td>");
-
-                CellType type = cell.getCellType();
-
-                if (type == CellType.FORMULA) {
-                    CellValue value = evaluator.evaluate(cell);
-
-                    switch (value.getCellType()) {
-                        case STRING:
-                            html.append(value.getStringValue());
-                            break;
-                        case NUMERIC:
-                            html.append(value.getNumberValue());
-                            break;
-                        case BOOLEAN:
-                            html.append(value.getBooleanValue());
-                            break;
-                        default:
-                            html.append("");
-                    }
-                } else {
-                    html.append(formatter.formatCellValue(cell));
-                }
-
-                html.append("</td>");
-            }
-
-            html.append("</tr>");
-        }
-
-        html.append("</table>");
-
-        return html.toString();
-    }
-
     public void execute() {
         // Init
         initWorkbook();
