@@ -67,6 +67,9 @@ public class BaselStatisticsPlugin implements IStatisticPlugin {
     private List<Group> resultList;
 
     @Getter
+    private String html;
+
+    @Getter
     private final Set<String> dates = new HashSet<>();
 
     public List<String> getStepnames() {
@@ -165,6 +168,9 @@ public class BaselStatisticsPlugin implements IStatisticPlugin {
             return;
         }
         calculateStatistics();
+        ExcelCreator excelCreator = new ExcelCreator(resultList, dates, selectedType);
+        excelCreator.createPivotTable();
+        html = excelCreator.convertSheetToHtml();
     }
 
     private void calculateStatistics() {
@@ -237,7 +243,12 @@ public class BaselStatisticsPlugin implements IStatisticPlugin {
 
     private void addEmptyObjectToMissingProjects(Group key, List<Interval> tempIntervals, ListIterator<Interval> intervalListIterator,
             Interval currentSmallest) {
-        List<String> projectNames = collections.get(key.getName());
+        List<String> projectNames;
+        if (Objects.equals(selectedType, possibleTypes[0])) {
+            projectNames = getCollections().get(key.getName());
+        } else {
+            projectNames = getColumns().get(key.getName());
+        }
         boolean foundName = false;
         for (String projectName : projectNames) {
             foundName = false;

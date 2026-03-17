@@ -28,6 +28,8 @@ public class ExcelCreator {
 
     private final Workbook wb = new XSSFWorkbook();
 
+    private Sheet sheet;
+
     private final java.awt.Color colorBorder = java.awt.Color.decode("#D9D9D9");
     private final java.awt.Color colorBackgroundLight = java.awt.Color.decode("#f2f2f2");
     private final java.awt.Color colorBackgroundMedium = java.awt.Color.decode("#e8e8e8");
@@ -41,10 +43,57 @@ public class ExcelCreator {
 
     private boolean backgroundColorToggle = true;
 
+
     private void initWorkbook() {
         boldFont = wb.createFont();
         boldFont.setBold(true);
         percentFormat = wb.createDataFormat().getFormat("0.00%");
+    }
+
+    public String convertSheetToHtml() {
+        FormulaEvaluator evaluator = wb.getCreationHelper().createFormulaEvaluator();
+        DataFormatter formatter = new DataFormatter();
+
+        StringBuilder html = new StringBuilder();
+        html.append("<table border='1'>");
+
+        for (Row row : sheet) {
+            html.append("<tr>");
+
+            for (Cell cell : row) {
+                html.append("<td>");
+
+                CellType type = cell.getCellType();
+
+                if (type == CellType.FORMULA) {
+                    CellValue value = evaluator.evaluate(cell);
+
+                    switch (value.getCellType()) {
+                        case STRING:
+                            html.append(value.getStringValue());
+                            break;
+                        case NUMERIC:
+                            html.append(value.getNumberValue());
+                            break;
+                        case BOOLEAN:
+                            html.append(value.getBooleanValue());
+                            break;
+                        default:
+                            html.append("");
+                    }
+                } else {
+                    html.append(formatter.formatCellValue(cell));
+                }
+
+                html.append("</td>");
+            }
+
+            html.append("</tr>");
+        }
+
+        html.append("</table>");
+
+        return html.toString();
     }
 
     public void execute() {
@@ -56,7 +105,7 @@ public class ExcelCreator {
         List<CellAddress> cellsPagesSums = new LinkedList<>();
         List<CellAddress> cellsPagesShow = new LinkedList<>();
 
-        Sheet sheet = wb.createSheet("results");
+        sheet = wb.createSheet("results");
 
         String[] myHeaders = { selectedType, "Projekte" };
         myHeaders = fillHeaders(myHeaders);
@@ -347,5 +396,9 @@ public class ExcelCreator {
         tempHeaders[pos] = "%";
 
         return tempHeaders;
+    }
+
+    public void createPivotTable() {
+
     }
 }
