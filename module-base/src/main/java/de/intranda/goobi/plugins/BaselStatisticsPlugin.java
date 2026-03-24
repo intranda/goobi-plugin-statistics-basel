@@ -138,10 +138,7 @@ public class BaselStatisticsPlugin implements IStatisticPlugin {
     @Override
     public void calculate() {
         if (StringUtils.isBlank(selectedStepName)) {
-            // abort, nothing selected
-            String errorText = "Error: Please select a Step to proceed.";
-            Helper.setFehlerMeldung(errorText);
-            log.error(errorText);
+            Helper.setFehlerMeldung("plugin_statistics_basel_error_noStep");
             return;
         }
 
@@ -163,17 +160,13 @@ public class BaselStatisticsPlugin implements IStatisticPlugin {
                 resultList.add(group);
             }
         } else {
-            String errorText = "Error: Please select one of the options: " + String.join(", ", possibleTypes) + ".";
-            Helper.setFehlerMeldung(errorText);
-            log.error(errorText, selectedType);
+            Helper.setFehlerMeldung("plugin_statistics_basel_error_invalidType");
             resultList = null;
             return;
         }
         // check if data is found
         if (resultList.stream().mapToLong(group -> group.getValues().size()).sum() == 0) {
-            String errorText = "Error: No data found.";
-            Helper.setFehlerMeldung(errorText);
-            log.error(errorText);
+            Helper.setFehlerMeldung("plugin_statistics_basel_error_noData");
             resultList = null;
             return;
         }
