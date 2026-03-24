@@ -9,6 +9,8 @@
     xmlns:form="http://goobi.io/form"
     xmlns:section="http://goobi.io/section">
 
+    <h:outputStylesheet name="uii/plugin_statistics_basel.css" />
+
     <!-- Permission check -->
     <h:panelGroup
         rendered="#{!LoginForm.hasRole('Plugin_statistics_basel')}"
@@ -24,7 +26,7 @@
             onkeypress="submitOnEnter(event);">
 
             <!-- Filter -->
-            <section:section type="primary">
+            <section:section type="action">
                 <section:header
                     icon="filter"
                     title="#{msgs.auswahl2}" />
@@ -96,19 +98,19 @@
 
             <!-- Results -->
             <h:panelGroup styleClass="mt-3 d-block" rendered="#{StatisticalQuestionBean.currentPlugin.resultList != null}">
-                <section:section type="neutral">
+                <section:section type="primary">
                     <section:header
                         icon="table"
                         title="#{msgs.ergebnisse}" />
                     <section:body padding="false">
-                        <div class="gw-table">
-                            <div class="gw-table__wrapper" style="overflow-x: auto;">
+                        <div class="gw-table stats-basel">
+                            <div class="gw-table__wrapper">
                                 <p:dataTable
                                     id="resultTable"
                                     value="#{StatisticalQuestionBean.currentPlugin.tableRows}"
                                     var="row"
                                     styleClass="table table-hover table-bordered table-sm"
-                                    rowStyleClass="#{row.separator ? 'stats-separator' : (row.bold ? 'fw-bold' : '')}"
+                                    rowStyleClass="#{row.separator ? 'stats-basel__row--separator' : (row.bold ? 'stats-basel__row--group' : '')}"
                                     resizableColumns="false">
 
                                     <p:column headerText="#{StatisticalQuestionBean.currentPlugin.selectedType}">

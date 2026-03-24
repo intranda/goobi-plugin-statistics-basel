@@ -385,9 +385,14 @@ public class BaselStatisticsPlugin implements IStatisticPlugin {
             dateColumnTotals.put(date, 0);
         }
 
+        boolean firstGroup = true;
         for (Group group : resultList) {
-            // Separator row between groups
-            tableRows.add(new TableRow());
+            if (!firstGroup) {
+                TableRow separatorRow = new TableRow();
+                separatorRow.setSeparator(true);
+                tableRows.add(separatorRow);
+            }
+            firstGroup = false;
 
             // Group total row (bold)
             TableRow groupRow = new TableRow();
@@ -423,7 +428,9 @@ public class BaselStatisticsPlugin implements IStatisticPlugin {
         }
 
         // Bottom Gesamt row
-        tableRows.add(new TableRow());
+        TableRow bottomSeparator = new TableRow();
+        bottomSeparator.setSeparator(true);
+        tableRows.add(bottomSeparator);
         TableRow gesamtRow = new TableRow();
         gesamtRow.setGroupLabel("Gesamt");
         gesamtRow.setBold(true);
