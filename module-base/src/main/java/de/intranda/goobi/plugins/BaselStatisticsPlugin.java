@@ -59,11 +59,11 @@ public class BaselStatisticsPlugin implements IStatisticPlugin {
     private String selectedStepName;
 
     @Getter
-    @Setter
-    private String selectedType;
+    private final String[] possibleTypes = { "Sammlungen", "Säulen" };
 
     @Getter
-    private final String[] possibleTypes = { "Sammlungen", "Säulen" };
+    @Setter
+    private String selectedType = possibleTypes[0];
 
     @Getter
     private List<Group> resultList;
@@ -77,9 +77,8 @@ public class BaselStatisticsPlugin implements IStatisticPlugin {
     @Getter
     private Map<String, String> columnHeaders;
 
-
     @Getter
-    private final Set<String> dates = new HashSet<>();
+    private Set<String> dates;
 
     public List<String> getStepnames() {
         if (stepnames == null || stepnames.isEmpty()) {
@@ -138,16 +137,16 @@ public class BaselStatisticsPlugin implements IStatisticPlugin {
 
     @Override
     public void calculate() {
-        resultList = new ArrayList<>();
-        if (StringUtils.isBlank(selectedStepName) || StringUtils.isBlank(selectedType)) {
+        if (StringUtils.isBlank(selectedStepName)) {
             // abort, nothing selected
-            // TODO show error message
-            String errorText = "Error: Please select one of the options: " + String.join(", ", possibleTypes) + ".";
+            String errorText = "Error: Please select a Step to proceed.";
             Helper.setFehlerMeldung(errorText);
-            log.error(errorText, selectedType);
+            log.error(errorText);
             return;
         }
 
+        dates = new HashSet<>();
+        resultList = new ArrayList<>();
         if ("Sammlungen".equals(selectedType)) {
             for (String col : getCollections().keySet()) {
                 List<String> projects = collections.get(col);
@@ -167,6 +166,8 @@ public class BaselStatisticsPlugin implements IStatisticPlugin {
             String errorText = "Error: Please select one of the options: " + String.join(", ", possibleTypes) + ".";
             Helper.setFehlerMeldung(errorText);
             log.error(errorText, selectedType);
+            resultList = null;
+            return;
         }
         // check if data is found
         if (resultList.stream().mapToLong(group -> group.getValues().size()).sum() == 0) {
