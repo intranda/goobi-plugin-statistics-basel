@@ -17,6 +17,8 @@ import org.goobi.production.plugin.interfaces.IStatisticPlugin;
 
 import java.text.DateFormat;
 import java.text.SimpleDateFormat;
+import java.time.Month;
+import java.time.format.TextStyle;
 import java.util.*;
 import java.util.stream.Collectors;
 
@@ -65,6 +67,16 @@ public class BaselStatisticsPlugin implements IStatisticPlugin {
 
     @Getter
     private List<Group> resultList;
+
+    @Getter
+    private List<TableRow> tableRows;
+
+    @Getter
+    private List<String> tableColumns;
+
+    @Getter
+    private Map<String, String> columnHeaders;
+
 
     @Getter
     private final Set<String> dates = new HashSet<>();
@@ -165,6 +177,7 @@ public class BaselStatisticsPlugin implements IStatisticPlugin {
             return;
         }
         calculateStatistics();
+        buildTableData();
     }
 
     private void calculateStatistics() {
@@ -237,7 +250,12 @@ public class BaselStatisticsPlugin implements IStatisticPlugin {
 
     private void addEmptyObjectToMissingProjects(Group key, List<Interval> tempIntervals, ListIterator<Interval> intervalListIterator,
             Interval currentSmallest) {
-        List<String> projectNames = collections.get(key.getName());
+        List<String> projectNames;
+        if (Objects.equals(selectedType, possibleTypes[0])) {
+            projectNames = getCollections().get(key.getName());
+        } else {
+            projectNames = getColumns().get(key.getName());
+        }
         boolean foundName = false;
         for (String projectName : projectNames) {
             foundName = false;
@@ -333,6 +351,100 @@ public class BaselStatisticsPlugin implements IStatisticPlugin {
         return null;
     }
 
+    private void buildTableData() {
+        tableRows = new ArrayList<>();
+        tableColumns = new ArrayList<>();
+        columnHeaders = new LinkedHashMap<>();
+
+        List<String> sortedDatesList = dates.stream().sorted().toList();
+
+        // Build column keys and headers for each month
+        for (String date : sortedDatesList) {
+            String[] parts = date.split("/");
+            String monthLabel = Month.of(Integer.parseInt(parts[1])).getDisplayName(TextStyle.FULL, Locale.GERMAN) + " " + parts[0];
+            tableColumns.add(date + "_pages");
+            columnHeaders.put(date + "_pages", monthLabel);
+            tableColumns.add(date + "_pct");
+            columnHeaders.put(date + "_pct", "%");
+        }
+        tableColumns.add("gesamt_pages");
+        columnHeaders.put("gesamt_pages", "Gesamt");
+        tableColumns.add("gesamt_pct");
+        columnHeaders.put("gesamt_pct", "%");
+
+
+
+        int grandTotal = resultList.stream()
+                .flatMap(g -> g.getTotalValues().stream())
+                .mapToInt(Interval::getPages)
+                .sum();
+
+        // Track column totals for bottom Gesamt row
+        Map<String, Integer> dateColumnTotals = new LinkedHashMap<>();
+        for (String date : sortedDatesList) {
+            dateColumnTotals.put(date, 0);
+        }
+
+        for (Group group : resultList) {
+            // Separator row between groups
+            tableRows.add(new TableRow());
+
+            // Group total row (bold)
+            TableRow groupRow = new TableRow();
+            groupRow.setGroupLabel(group.getName());
+            groupRow.setBold(true);
+            int groupTotal = 0;
+            for (Interval totalInterval : group.getTotalValues()) {
+                groupRow.getCells().put(totalInterval.getDate() + "_pages", formatNumber(totalInterval.getPages()));
+                groupRow.getCells().put(totalInterval.getDate() + "_pct", formatPercent(totalInterval.getPercent()));
+                groupTotal += totalInterval.getPages();
+                dateColumnTotals.merge(totalInterval.getDate(), totalInterval.getPages(), Integer::sum);
+            }
+            groupRow.getCells().put("gesamt_pages", formatNumber(groupTotal));
+            groupRow.getCells().put("gesamt_pct", formatPercent(grandTotal > 0 ? (float) groupTotal / grandTotal : 0));
+            tableRows.add(groupRow);
+
+            // Project sub-rows
+            Map<String, List<Interval>> byProject = group.getValues().stream()
+                    .collect(Collectors.groupingBy(Interval::getProjektTitle, TreeMap::new, Collectors.toList()));
+            for (Map.Entry<String, List<Interval>> entry : byProject.entrySet()) {
+                TableRow projectRow = new TableRow();
+                projectRow.setProjectLabel(entry.getKey());
+                int projectTotal = 0;
+                for (Interval interval : entry.getValue()) {
+                    projectRow.getCells().put(interval.getDate() + "_pages", formatNumber(interval.getPages()));
+                    projectRow.getCells().put(interval.getDate() + "_pct", formatPercent(interval.getPercent()));
+                    projectTotal += interval.getPages();
+                }
+                projectRow.getCells().put("gesamt_pages", formatNumber(projectTotal));
+                projectRow.getCells().put("gesamt_pct", formatPercent(grandTotal > 0 ? (float) projectTotal / grandTotal : 0));
+                tableRows.add(projectRow);
+            }
+        }
+
+        // Bottom Gesamt row
+        tableRows.add(new TableRow());
+        TableRow gesamtRow = new TableRow();
+        gesamtRow.setGroupLabel("Gesamt");
+        gesamtRow.setBold(true);
+        for (String date : sortedDatesList) {
+            int colTotal = dateColumnTotals.getOrDefault(date, 0);
+            gesamtRow.getCells().put(date + "_pages", formatNumber(colTotal));
+            gesamtRow.getCells().put(date + "_pct", "100%");
+        }
+        gesamtRow.getCells().put("gesamt_pages", formatNumber(grandTotal));
+        gesamtRow.getCells().put("gesamt_pct", "100%");
+        tableRows.add(gesamtRow);
+    }
+
+    private String formatNumber(int value) {
+        return String.format(Locale.GERMAN, "%,d", value);
+    }
+
+    private String formatPercent(float value) {
+        return String.format(Locale.GERMAN, "%.1f%%", value * 100);
+    }
+
     /**
      * public method to reset the calculated statistics again
      */
@@ -341,6 +453,9 @@ public class BaselStatisticsPlugin implements IStatisticPlugin {
         startDateDate = null;
         endDateDate = null;
         selectedType = null;
+        tableRows = null;
+        tableColumns = null;
+        columnHeaders = null;
     }
 
     /**

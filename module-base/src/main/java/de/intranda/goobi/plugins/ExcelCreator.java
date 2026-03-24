@@ -28,6 +28,8 @@ public class ExcelCreator {
 
     private final Workbook wb = new XSSFWorkbook();
 
+    private Sheet sheet;
+
     private final java.awt.Color colorBorder = java.awt.Color.decode("#D9D9D9");
     private final java.awt.Color colorBackgroundLight = java.awt.Color.decode("#f2f2f2");
     private final java.awt.Color colorBackgroundMedium = java.awt.Color.decode("#e8e8e8");
@@ -40,6 +42,7 @@ public class ExcelCreator {
     private final Map<String, CellStyle> cellStyleMap = new HashMap<>();
 
     private boolean backgroundColorToggle = true;
+
 
     private void initWorkbook() {
         boldFont = wb.createFont();
@@ -56,7 +59,7 @@ public class ExcelCreator {
         List<CellAddress> cellsPagesSums = new LinkedList<>();
         List<CellAddress> cellsPagesShow = new LinkedList<>();
 
-        Sheet sheet = wb.createSheet("results");
+        sheet = wb.createSheet("results");
 
         String[] myHeaders = { selectedType, "Projekte" };
         myHeaders = fillHeaders(myHeaders);
@@ -347,5 +350,9 @@ public class ExcelCreator {
         tempHeaders[pos] = "%";
 
         return tempHeaders;
+    }
+
+    public void createPivotTable() {
+
     }
 }
