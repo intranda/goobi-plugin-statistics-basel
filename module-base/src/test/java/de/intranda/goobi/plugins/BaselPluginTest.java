@@ -89,4 +89,14 @@ public class BaselPluginTest {
         assertEquals("Handschriften allgemein", fixture.get("Systematische Digitalisierung").get(2));
 
     }
+    @Test
+    public void testCalculate() {
+        BaselStatisticsPlugin plugin = new BaselStatisticsPlugin();
+
+        Map<String, List<String>> collections = plugin.getCollections();
+
+        plugin.calculate();
+        List<Group> resultList = plugin.getResultList();
+        System.out.println(resultList);
+    }
 }
