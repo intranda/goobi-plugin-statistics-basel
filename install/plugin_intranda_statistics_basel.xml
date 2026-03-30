@@ -1,47 +1,35 @@
 <?xml version="1.0" encoding="UTF-8"?>
 <config_plugin>
     <category name="Sammlungen">
-        <group name="Handschriften">
-            <project>Kartause</project>
-            <project>Handschriften allgemein</project>
-            <project>E-Codices</project>
+        <group name="Gruppe 1">
+            <project>Projekt A</project>
+            <project>Projekt B</project>
+            <project>Projekt C</project>
         </group>
-        <group name="Alte Drucke">
-            <project>Inkunabeln allgemein</project>
-            <project>BBK 17</project>
-            <project>BBK 18</project>
+        <group name="Gruppe 2">
+            <project>Projekt D</project>
+            <project>Projekt E</project>
+            <project>Projekt F</project>
         </group>
-        <group name="SWA">
-            <project>Firmenarchive Sutter &amp; Sutter</project>
-            <project>SWA Archivalien</project>
-        </group>
-        <group name="SWA">
-            <project>Autographensammlung</project>
-            <project>Bernoulli-Briefe</project>
+        <group name="Gruppe 3">
+            <project>Projekt G</project>
+            <project>Projekt H</project>
         </group>
     </category>
     <category name="Säulen">
-        <group name="Systematische Digitalisierung">
-            <project>Bernoulli-Briefe</project>
-            <project>Kartause</project>
-            <project>Handschriften allgemein</project>
-            <project>E-Codices</project>
-            <project>Inkunabeln allgemein</project>
-            <project>BBK 17</project>
-            <project>BBK 18</project>
-            <project>Firmenarchive Sutter &amp; Sutter</project>
-            <project>SWA Archivalien</project>
+        <group name="Säule 1">
+            <project>Projekt A</project>
+            <project>Projekt B</project>
+            <project>Projekt C</project>
+            <project>Projekt D</project>
+            <project>Projekt E</project>
         </group>
-        <group name="Tintenfraß">
-            <project>Grazer Tisch</project>
-            <project>Cobra</project>
-            <project>Archiv-Scanner</project>
+        <group name="Säule 2">
+            <project>Projekt F</project>
+            <project>Projekt G</project>
         </group>
-        <group name="Sicherheitsdigitalisierungen">
-            <project>Autographensammlung</project>
-        </group>
-        <group name="EOD">
-            <project>Kundenaufträge e-rara</project>
+        <group name="Säule 3">
+            <project>Projekt H</project>
         </group>
     </category>
 </config_plugin>
