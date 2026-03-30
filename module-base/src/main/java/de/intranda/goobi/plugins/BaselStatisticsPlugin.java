@@ -28,7 +28,7 @@ public class BaselStatisticsPlugin implements IStatisticPlugin {
 
     private static final long serialVersionUID = -4521526253463061214L;
     @Getter
-    private String title = "Statistik Basel";
+    private String title = "intranda_statistics_basel";
     @Getter
     private PluginType type = PluginType.Statistics;
 
