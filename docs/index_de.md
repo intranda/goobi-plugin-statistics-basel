@@ -22,12 +22,13 @@ Um das Plugin nutzen zu können, müssen folgende Dateien installiert werden:
 /opt/digiverso/goobi/config/plugin_intranda_statistics_basel.xml
 ```
 
-Für eine Nutzung dieses Plugins muss der Nutzer über die korrekte Rollenberechtigung verfügen.
+Für eine Nutzung dieses Plugins muss der Nutzer über die korrekte Rollenberechtigung verfügen. Die folgende Tabelle gibt einen Überblick über die benötigten Berechtigungen:
 
-<!-- SCREENSHOT 1 (screen1_de.png): Fehlermeldung im Plugin-Bereich, wenn die Rolle fehlt. Zu sehen ist ein roter Hinweiskasten mit dem Text, dass die Berechtigung "Plugin_statistics_basel" fehlt. -->
-![Ohne korrekte Berechtigung ist das Plugin nicht nutzbar](screen1_de.png)
+| Berechtigung | Beschreibung |
+|---|---|
+| `Plugin_statistics_basel` | Ermöglicht den Zugriff auf das Basel-Statistik-Plugin und die Auswertung projektübergreifender Digitalisierungsleistungen. |
 
-Bitte weisen Sie daher der entsprechenden Nutzergruppe die Rolle `Plugin_statistics_basel` zu.
+Um die Rolle einer Nutzergruppe zuzuweisen, öffnen Sie die Goobi-Verwaltungsoberfläche und navigieren Sie zu `Administration` > `Nutzergruppen`. Wählen Sie die gewünschte Nutzergruppe aus oder legen Sie eine neue an und fügen Sie die Rolle `Plugin_statistics_basel` in das Rollenfeld der Gruppe ein.
 
 <!-- SCREENSHOT 2 (screen2_de.png): Goobi-Oberfläche im Bereich Nutzergruppen, in der die Rolle "Plugin_statistics_basel" einer Gruppe zugewiesen ist. Zu sehen ist die Bearbeitungsmaske einer Nutzergruppe mit der eingetragenen Rolle in der Rollenliste. -->
 ![Korrekt zugewiesene Rolle für die Nutzer](screen2_de.png)
