@@ -8,6 +8,8 @@ import lombok.RequiredArgsConstructor;
 import lombok.extern.log4j.Log4j2;
 import org.apache.poi.ss.usermodel.*;
 import org.apache.poi.ss.util.CellAddress;
+import org.apache.poi.ss.util.CellRangeAddress;
+import org.apache.poi.ss.util.RegionUtil;
 import org.apache.poi.xssf.usermodel.XSSFColor;
 import org.apache.poi.xssf.usermodel.XSSFWorkbook;
 
@@ -31,7 +33,6 @@ public class ExcelCreator {
     private Sheet sheet;
 
     private final java.awt.Color colorBackgroundLight = java.awt.Color.decode("#f2f2f2");
-    private final java.awt.Color colorBackgroundDark = java.awt.Color.decode("#a6a6a6");
 
     private Font boldFont;
 
@@ -124,10 +125,20 @@ public class ExcelCreator {
         // add Formular for total percentages
         createTotalPercentagesPerRow(cellsPagesShow, sheet, columnCounter, cellsPagesSums);
 
+        applyTopBorderToRow(sheet, totalRow.getRowNum(), 0, columnCounter);
+
         autoSizeWithBoldCorrection(sheet, 0);
         autoSizeWithBoldCorrection(sheet, 1);
 
         return wb;
+    }
+
+    private void applyTopBorderToRow(Sheet sheet, int rowIndex, int firstColumn, int lastColumn) {
+        CellRangeAddress range = new CellRangeAddress(rowIndex, rowIndex, firstColumn, lastColumn);
+        RegionUtil.setBorderTop(BorderStyle.THIN, range, sheet);
+        // buildCellStyle() leaves the cached styles with GREY_25_PERCENT borders — overwrite
+        // the top edge so the separator above the 'Gesamt' row reads as a consistent black line.
+        RegionUtil.setTopBorderColor(IndexedColors.BLACK.getIndex(), range, sheet);
     }
 
     // POI's AWT-based width measurement consistently under-sizes bold fonts;
@@ -226,26 +237,27 @@ public class ExcelCreator {
 
     private int createTotalRowBottom(Row totalRow, int columnCounter, Map<String, List<CellAddress>> cellsTotalPages,
             List<CellAddress> totalAddresses) {
+        resetColorToggle();
         Cell currentCell;
         currentCell = totalRow.createCell(columnCounter++, CellType.STRING);
         currentCell.setCellValue("Gesamt");
-        currentCell.setCellStyle(buildCellStyle(colorBackgroundDark, true, false, false));
+        currentCell.setCellStyle(buildCellStyle(null, true, false, false));
 
         currentCell = totalRow.createCell(columnCounter++, CellType.STRING);
-        currentCell.setCellStyle(buildCellStyle(colorBackgroundDark, false, false, false));
+        currentCell.setCellStyle(buildCellStyle(null, false, false, false));
 
         for (String key : cellsTotalPages.keySet().stream().sorted().toList()) {
             totalAddresses.add(fillCellFormulaSum(totalRow, columnCounter++, cellsTotalPages.get(key),
-                    buildCellStyle(colorBackgroundDark, true, false, false)).getAddress());
+                    buildCellStyle(getBackgroundColor(), true, false, false)).getAddress());
 
             currentCell = totalRow.createCell(columnCounter++, CellType.STRING);
-            currentCell.setCellStyle(buildCellStyle(colorBackgroundDark, false, false, false));
-            //            currentCell = fillCellFormulaSum(totalRow, columnCounter++, cellsTotalPercent.get(key));
-            //            currentCell.setCellStyle(boldPercentStyle);
+            currentCell.setCellStyle(buildCellStyle(getBackgroundColor(), false, true, false));
+
+            toggleColor();
         }
         columnCounter++;
-        fillCellFormulaSum(totalRow, columnCounter++, totalAddresses, buildCellStyle(colorBackgroundDark, true, false, false));
-        totalRow.createCell(columnCounter, CellType.FORMULA).setCellStyle(buildCellStyle(colorBackgroundDark, false, false, false));
+        fillCellFormulaSum(totalRow, columnCounter++, totalAddresses, buildCellStyle(getBackgroundColor(), true, false, false));
+        totalRow.createCell(columnCounter, CellType.FORMULA).setCellStyle(buildCellStyle(getBackgroundColor(), false, true, false));
         return columnCounter;
     }
 

@@ -17,11 +17,15 @@ import java.util.List;
 import java.util.Map;
 import java.util.Set;
 
+import org.apache.poi.ss.usermodel.BorderStyle;
 import org.apache.poi.ss.usermodel.Cell;
 import org.apache.poi.ss.usermodel.CellType;
+import org.apache.poi.ss.usermodel.IndexedColors;
 import org.apache.poi.ss.usermodel.Row;
 import org.apache.poi.ss.usermodel.Sheet;
 import org.apache.poi.ss.usermodel.Workbook;
+import org.apache.poi.xssf.usermodel.XSSFCellStyle;
+import org.apache.poi.xssf.usermodel.XSSFColor;
 import org.easymock.EasyMock;
 import org.junit.Before;
 import org.junit.BeforeClass;
@@ -279,5 +283,136 @@ public class BaselPluginTest {
                 sql.contains("BearbeitungsEnde <"));
         assertFalse("SQL must not use BETWEEN when no dates are set: " + sql,
                 sql.contains("BearbeitungsEnde between"));
+    }
+
+    @Test
+    public void testBottomGesamtRowDoesNotUseDarkGrayBackground() throws IOException {
+        PowerMock.mockStatic(Helper.class);
+        EasyMock.expect(Helper.getTranslation(EasyMock.anyString()))
+                .andAnswer(() -> (String) EasyMock.getCurrentArguments()[0])
+                .anyTimes();
+        PowerMock.replay(Helper.class);
+
+        Group group = buildSingleMonthGroup();
+        Set<String> dates = new LinkedHashSet<>();
+        dates.add("2024/01");
+
+        ExcelCreator creator = new ExcelCreator(Collections.singletonList(group), dates, "Sammlungen");
+        Workbook wb = creator.buildWorkbook();
+        try {
+            Sheet sheet = wb.getSheet("results");
+            Row bottom = sheet.getRow(sheet.getLastRowNum());
+
+            // Every cell of the bottom 'Gesamt' row must avoid the dark-gray (#a6a6a6) fill
+            // that the group-total rows and sub-rows do not use either.
+            for (int c = 0; c < bottom.getLastCellNum(); c++) {
+                Cell cell = bottom.getCell(c);
+                if (cell == null) {
+                    continue;
+                }
+                XSSFCellStyle style = (XSSFCellStyle) cell.getCellStyle();
+                XSSFColor fg = style.getFillForegroundXSSFColor();
+                String argb = fg != null ? fg.getARGBHex() : null;
+                assertFalse("bottom 'Gesamt' cell at column " + c + " must not use dark gray (a6a6a6); was: " + argb,
+                        argb != null && argb.toUpperCase().endsWith("A6A6A6"));
+            }
+        } finally {
+            wb.close();
+        }
+    }
+
+    @Test
+    public void testBottomGesamtRowHasThinTopBorderOnly() throws IOException {
+        PowerMock.mockStatic(Helper.class);
+        EasyMock.expect(Helper.getTranslation(EasyMock.anyString()))
+                .andAnswer(() -> (String) EasyMock.getCurrentArguments()[0])
+                .anyTimes();
+        PowerMock.replay(Helper.class);
+
+        Group group = new Group();
+        group.setName("G1");
+        group.getValues().add(new Interval("P", "2024/01", 100, 5, 1.0f));
+        group.getValues().add(new Interval("P", "2024/02", 200, 10, 1.0f));
+        group.getTotalValues().add(new Interval("total", "2024/01", 100, 5, 1.0f));
+        group.getTotalValues().add(new Interval("total", "2024/02", 200, 10, 1.0f));
+
+        Set<String> dates = new LinkedHashSet<>();
+        dates.add("2024/01");
+        dates.add("2024/02");
+
+        ExcelCreator creator = new ExcelCreator(Collections.singletonList(group), dates, "Sammlungen");
+        Workbook wb = creator.buildWorkbook();
+        try {
+            Sheet sheet = wb.getSheet("results");
+            Row bottom = sheet.getRow(sheet.getLastRowNum());
+
+            // Every bottom-row cell must have a THIN top border; no MEDIUM frame on the
+            // other three sides (we want only a slim separator above the 'Gesamt' row).
+            for (int c = 0; c < bottom.getLastCellNum(); c++) {
+                Cell cell = bottom.getCell(c);
+                if (cell == null) {
+                    continue;
+                }
+                assertEquals("top border at col " + c + " must be THIN",
+                        BorderStyle.THIN, cell.getCellStyle().getBorderTop());
+                assertFalse("left border at col " + c + " must not be MEDIUM",
+                        cell.getCellStyle().getBorderLeft() == BorderStyle.MEDIUM);
+                assertFalse("right border at col " + c + " must not be MEDIUM",
+                        cell.getCellStyle().getBorderRight() == BorderStyle.MEDIUM);
+                assertFalse("bottom border at col " + c + " must not be MEDIUM",
+                        cell.getCellStyle().getBorderBottom() == BorderStyle.MEDIUM);
+            }
+        } finally {
+            wb.close();
+        }
+    }
+
+    @Test
+    public void testBottomGesamtRowTopBorderIsBlack() throws IOException {
+        PowerMock.mockStatic(Helper.class);
+        EasyMock.expect(Helper.getTranslation(EasyMock.anyString()))
+                .andAnswer(() -> (String) EasyMock.getCurrentArguments()[0])
+                .anyTimes();
+        PowerMock.replay(Helper.class);
+
+        Group group = new Group();
+        group.setName("G1");
+        group.getValues().add(new Interval("P", "2024/01", 100, 5, 1.0f));
+        group.getValues().add(new Interval("P", "2024/02", 200, 10, 1.0f));
+        group.getTotalValues().add(new Interval("total", "2024/01", 100, 5, 1.0f));
+        group.getTotalValues().add(new Interval("total", "2024/02", 200, 10, 1.0f));
+
+        Set<String> dates = new LinkedHashSet<>();
+        dates.add("2024/01");
+        dates.add("2024/02");
+
+        ExcelCreator creator = new ExcelCreator(Collections.singletonList(group), dates, "Sammlungen");
+        Workbook wb = creator.buildWorkbook();
+        try {
+            Sheet sheet = wb.getSheet("results");
+            Row bottom = sheet.getRow(sheet.getLastRowNum());
+            short black = IndexedColors.BLACK.getIndex();
+            // The thin top-border must be black across the whole row so the separator above
+            // the 'Gesamt' row is drawn consistently — including the separator column that
+            // RegionUtil creates on the fly.
+            for (int c = 0; c < bottom.getLastCellNum(); c++) {
+                Cell cell = bottom.getCell(c);
+                if (cell == null) {
+                    continue;
+                }
+                assertEquals("top border colour must be black at col " + c,
+                        black, cell.getCellStyle().getTopBorderColor());
+            }
+        } finally {
+            wb.close();
+        }
+    }
+
+    private static Group buildSingleMonthGroup() {
+        Group group = new Group();
+        group.setName("G1");
+        group.getValues().add(new Interval("P", "2024/01", 100, 5, 1.0f));
+        group.getTotalValues().add(new Interval("total", "2024/01", 100, 5, 1.0f));
+        return group;
     }
 }
