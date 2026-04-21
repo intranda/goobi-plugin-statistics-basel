@@ -8,6 +8,8 @@ import lombok.RequiredArgsConstructor;
 import lombok.extern.log4j.Log4j2;
 import org.apache.poi.ss.usermodel.*;
 import org.apache.poi.ss.util.CellAddress;
+import org.apache.poi.ss.util.CellRangeAddress;
+import org.apache.poi.ss.util.RegionUtil;
 import org.apache.poi.xssf.usermodel.XSSFColor;
 import org.apache.poi.xssf.usermodel.XSSFWorkbook;
 
@@ -30,10 +32,7 @@ public class ExcelCreator {
 
     private Sheet sheet;
 
-    private final java.awt.Color colorBorder = java.awt.Color.decode("#D9D9D9");
     private final java.awt.Color colorBackgroundLight = java.awt.Color.decode("#f2f2f2");
-    private final java.awt.Color colorBackgroundMedium = java.awt.Color.decode("#e8e8e8");
-    private final java.awt.Color colorBackgroundDark = java.awt.Color.decode("#a6a6a6");
 
     private Font boldFont;
 
@@ -51,6 +50,11 @@ public class ExcelCreator {
     }
 
     public void execute() {
+        Workbook workbook = buildWorkbook();
+        writeToResponse(workbook);
+    }
+
+    Workbook buildWorkbook() {
         // Init
         initWorkbook();
         List<CellAddress> cellsPages = new LinkedList<>();
@@ -71,21 +75,20 @@ public class ExcelCreator {
 
         // Set Header Row
         for (String headerName : myHeaders) {
-            if (headerName.isEmpty()) {
-                continue;
-            }
             currentCell = headerRow.createCell(columnCounter);
             currentCell.setCellValue(Helper.getTranslation(headerName));
-            if (currentCell.getColumnIndex() < 2) {
-                currentCell.setCellStyle(buildCellStyle(null, true, false, false));
-            } else {
-                currentCell.setCellStyle(buildCellStyle(getBackgroundColor(), true, false, true));
-                if (headerName.contains("%")) {
-                    toggleColor();
+            if (!headerName.isEmpty()) {
+                if (currentCell.getColumnIndex() < 2) {
+                    currentCell.setCellStyle(buildCellStyle(null, true, false, false));
+                } else {
+                    currentCell.setCellStyle(buildCellStyle(getBackgroundColor(), true, false, true));
+                    if (headerName.contains("%")) {
+                        toggleColor();
+                    }
                 }
-            }
-            if (headerName.length() > 8) {
-                sheet.autoSizeColumn(currentCell.getColumnIndex());
+                if (headerName.length() > 8) {
+                    autoSizeWithBoldCorrection(sheet, currentCell.getColumnIndex());
+                }
             }
             columnCounter++;
         }
@@ -122,9 +125,30 @@ public class ExcelCreator {
         // add Formular for total percentages
         createTotalPercentagesPerRow(cellsPagesShow, sheet, columnCounter, cellsPagesSums);
 
-        sheet.autoSizeColumn(0);
-        sheet.autoSizeColumn(1);
+        applyTopBorderToRow(sheet, totalRow.getRowNum(), 0, columnCounter);
 
+        autoSizeWithBoldCorrection(sheet, 0);
+        autoSizeWithBoldCorrection(sheet, 1);
+
+        return wb;
+    }
+
+    private void applyTopBorderToRow(Sheet sheet, int rowIndex, int firstColumn, int lastColumn) {
+        CellRangeAddress range = new CellRangeAddress(rowIndex, rowIndex, firstColumn, lastColumn);
+        RegionUtil.setBorderTop(BorderStyle.THIN, range, sheet);
+        // buildCellStyle() leaves the cached styles with GREY_25_PERCENT borders — overwrite
+        // the top edge so the separator above the 'Gesamt' row reads as a consistent black line.
+        RegionUtil.setTopBorderColor(IndexedColors.BLACK.getIndex(), range, sheet);
+    }
+
+    // POI's AWT-based width measurement consistently under-sizes bold fonts;
+    // pad by ~10% so bold headers and totals are not truncated when Excel renders them.
+    private void autoSizeWithBoldCorrection(Sheet sheet, int columnIndex) {
+        sheet.autoSizeColumn(columnIndex);
+        sheet.setColumnWidth(columnIndex, sheet.getColumnWidth(columnIndex) * 11 / 10);
+    }
+
+    private void writeToResponse(Workbook workbook) {
         FacesContext facesContext = FacesContextHelper.getCurrentFacesContext();
         HttpServletResponse response = (HttpServletResponse) facesContext.getExternalContext().getResponse();
         OutputStream out;
@@ -132,14 +156,14 @@ public class ExcelCreator {
             out = response.getOutputStream();
             response.setContentType("application/vnd.ms-excel");
             response.setHeader("Content-Disposition", "attachment;filename=\"report.xlsx\"");
-            wb.write(out);
+            workbook.write(out);
             out.flush();
             facesContext.responseComplete();
         } catch (IOException e) {
             log.error(e);
         }
         try {
-            wb.close();
+            workbook.close();
         } catch (IOException e) {
             log.error(e);
         }
@@ -150,7 +174,7 @@ public class ExcelCreator {
     }
 
     private java.awt.Color getBackgroundColor() {
-        return backgroundColorToggle ? colorBackgroundLight : colorBackgroundMedium;
+        return backgroundColorToggle ? colorBackgroundLight : null;
     }
 
     private void toggleColor() {
@@ -192,6 +216,7 @@ public class ExcelCreator {
             List<CellAddress> cellsPagesSums) {
         Cell lastCell = null;
         Cell currentCell;
+        cellsPagesShow.sort(Comparator.comparingInt(CellAddress::getRow));
         for (CellAddress cellsPagesSum : cellsPagesShow) {
             // if no cell above -> this one has to be bold
             Row row = sheet.getRow(cellsPagesSum.getRow());
@@ -202,9 +227,9 @@ public class ExcelCreator {
                             .collect(Collectors.joining(",")) + ")");
 
             if (lastCell == null || (currentCell.getAddress().getRow() - lastCell.getAddress().getRow()) != 1) {
-                currentCell.setCellStyle(buildCellStyle(colorBackgroundMedium, true, true, false));
+                currentCell.setCellStyle(buildCellStyle(colorBackgroundLight, true, true, false));
             } else {
-                currentCell.setCellStyle(buildCellStyle(colorBackgroundMedium, false, true, false));
+                currentCell.setCellStyle(buildCellStyle(colorBackgroundLight, false, true, false));
             }
             lastCell = currentCell;
         }
@@ -212,26 +237,27 @@ public class ExcelCreator {
 
     private int createTotalRowBottom(Row totalRow, int columnCounter, Map<String, List<CellAddress>> cellsTotalPages,
             List<CellAddress> totalAddresses) {
+        resetColorToggle();
         Cell currentCell;
         currentCell = totalRow.createCell(columnCounter++, CellType.STRING);
         currentCell.setCellValue("Gesamt");
-        currentCell.setCellStyle(buildCellStyle(colorBackgroundDark, true, false, false));
+        currentCell.setCellStyle(buildCellStyle(null, true, false, false));
 
         currentCell = totalRow.createCell(columnCounter++, CellType.STRING);
-        currentCell.setCellStyle(buildCellStyle(colorBackgroundDark, false, false, false));
+        currentCell.setCellStyle(buildCellStyle(null, false, false, false));
 
         for (String key : cellsTotalPages.keySet().stream().sorted().toList()) {
             totalAddresses.add(fillCellFormulaSum(totalRow, columnCounter++, cellsTotalPages.get(key),
-                    buildCellStyle(colorBackgroundDark, true, false, false)).getAddress());
+                    buildCellStyle(getBackgroundColor(), true, false, false)).getAddress());
 
             currentCell = totalRow.createCell(columnCounter++, CellType.STRING);
-            currentCell.setCellStyle(buildCellStyle(colorBackgroundDark, false, false, false));
-            //            currentCell = fillCellFormulaSum(totalRow, columnCounter++, cellsTotalPercent.get(key));
-            //            currentCell.setCellStyle(boldPercentStyle);
+            currentCell.setCellStyle(buildCellStyle(getBackgroundColor(), false, true, false));
+
+            toggleColor();
         }
         columnCounter++;
-        fillCellFormulaSum(totalRow, columnCounter++, totalAddresses, buildCellStyle(colorBackgroundDark, true, false, false));
-        totalRow.createCell(columnCounter, CellType.FORMULA).setCellStyle(buildCellStyle(colorBackgroundDark, false, false, false));
+        fillCellFormulaSum(totalRow, columnCounter++, totalAddresses, buildCellStyle(getBackgroundColor(), true, false, false));
+        totalRow.createCell(columnCounter, CellType.FORMULA).setCellStyle(buildCellStyle(getBackgroundColor(), false, true, false));
         return columnCounter;
     }
 
@@ -283,7 +309,7 @@ public class ExcelCreator {
             Map<String, List<CellAddress>> cellsTotalPages, List<CellAddress> cellsPagesSums) {
         int columnCounter = 0;
         Cell currentCell;
-        currentCell = resultRow.createCell(columnCounter++, CellType.NUMERIC);
+        currentCell = resultRow.createCell(columnCounter++, CellType.STRING);
         currentCell.setCellValue(group.getName());
         currentCell.setCellStyle(buildCellStyle(null, true, false, false));
         cellsPages.clear();
@@ -350,9 +376,5 @@ public class ExcelCreator {
         tempHeaders[pos] = "%";
 
         return tempHeaders;
-    }
-
-    public void createPivotTable() {
-
     }
 }
