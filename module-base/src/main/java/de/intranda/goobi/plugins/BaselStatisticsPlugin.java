@@ -175,7 +175,9 @@ public class BaselStatisticsPlugin implements IStatisticPlugin {
     }
 
     private void calculateStatistics() {
-        Map<Group, ListIterator<Interval>> listIteratorMap = new HashMap<>();
+        // LinkedHashMap preserves the configured group order so that total intervals are
+        // built in a deterministic sequence, independent of HashMap key hashing.
+        Map<Group, ListIterator<Interval>> listIteratorMap = new LinkedHashMap<>();
         boolean finished = false;
 
         for (Group group : resultList) {
@@ -285,6 +287,28 @@ public class BaselStatisticsPlugin implements IStatisticPlugin {
     }
 
     private Group getValuesFromDatabase(List<String> projects) {
+        String sql = buildSqlQuery(projects);
+
+        @SuppressWarnings("unchecked")
+        List<Object> results = ProcessManager.runSQL(sql);
+
+        Group group = new Group();
+
+        for (Object rowObj : results) {
+            Object[] row = (Object[]) rowObj;
+            String projectTitle = (String) row[0];
+            String pages = (String) row[1];
+            String processes = (String) row[2];
+            String date = (String) row[3];
+
+            Interval interval = new Interval(projectTitle, date, Integer.parseInt(pages), Integer.parseInt(processes), 0);
+            group.getValues().add(interval);
+        }
+
+        return group;
+    }
+
+    String buildSqlQuery(List<String> projects) {
         StringBuilder projectString = new StringBuilder();
         for (String projectName : projects) {
             if (!projectString.isEmpty()) {
@@ -301,38 +325,20 @@ public class BaselStatisticsPlugin implements IStatisticPlugin {
         sql.append("WHERE schritte.titel = '").append(selectedStepName).append("' ");
         sql.append("AND BearbeitungsStatus = 3 ");
         if (startDateDate != null && endDateDate != null) {
-            sql.append("AND  BearbeitungsEnde between '")
+            sql.append("AND BearbeitungsEnde between '")
                     .append(dateFormat.format(startDateDate))
-                    .append("' and '" + dateFormat.format(endDateDate))
+                    .append("' and '")
+                    .append(dateFormat.format(endDateDate))
                     .append("' ");
         } else if (startDateDate != null) {
-            sql.append("BearbeitungsEnde > '").append(dateFormat.format(startDateDate)).append("' ");
+            sql.append("AND BearbeitungsEnde > '").append(dateFormat.format(startDateDate)).append("' ");
         } else if (endDateDate != null) {
-            sql.append("BearbeitungsEnde < '").append(dateFormat.format(endDateDate)).append("' ");
+            sql.append("AND BearbeitungsEnde < '").append(dateFormat.format(endDateDate)).append("' ");
         }
         sql.append("AND projekte.titel IN ( ").append(projectString.toString()).append(") ");
         sql.append("GROUP BY titel, finishDate ");
         sql.append("ORDER BY finishDate");
-
-        @SuppressWarnings("unchecked")
-        List<Object> results = ProcessManager.runSQL(sql.toString());
-
-        Group group = new Group();
-
-        for (Object rowObj : results) {
-            Object[] row = (Object[]) rowObj;
-            String projectTitle = (String) row[0];
-            String pages = (String) row[1];
-            String processes = (String) row[2];
-            String date = (String) row[3];
-
-            //  System.out.println(date + ": " + pages + " " + processes);
-
-            Interval interval = new Interval(projectTitle, date, Integer.parseInt(pages), Integer.parseInt(processes), 0);
-            group.getValues().add(interval);
-        }
-
-        return group;
+        return sql.toString();
     }
 
     @Override
@@ -453,7 +459,7 @@ public class BaselStatisticsPlugin implements IStatisticPlugin {
         selectedStepName = null;
         startDateDate = null;
         endDateDate = null;
-        selectedType = null;
+        selectedType = possibleTypes[0];
         tableRows = null;
         tableColumns = null;
         columnHeaders = null;
