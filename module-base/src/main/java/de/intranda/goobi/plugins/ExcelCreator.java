@@ -227,9 +227,9 @@ public class ExcelCreator {
                             .collect(Collectors.joining(",")) + ")");
 
             if (lastCell == null || (currentCell.getAddress().getRow() - lastCell.getAddress().getRow()) != 1) {
-                currentCell.setCellStyle(buildCellStyle(colorBackgroundLight, true, true, false));
+                currentCell.setCellStyle(buildCellStyle(getBackgroundColor(), true, true, false));
             } else {
-                currentCell.setCellStyle(buildCellStyle(colorBackgroundLight, false, true, false));
+                currentCell.setCellStyle(buildCellStyle(getBackgroundColor(), false, true, false));
             }
             lastCell = currentCell;
         }
@@ -265,8 +265,8 @@ public class ExcelCreator {
             List<CellAddress> cellsPercent, List<CellAddress> cellsPagesShow) {
         Cell currentCell;
         Row resultRow;
-        resetColorToggle();
         for (String key : intervalMap.keySet()) {
+            resetColorToggle();
             int columnCounter = 1;
             List<Interval> intervals = intervalMap.get(key);
             resultRow = sheet.createRow(rowCounter++);
@@ -315,6 +315,7 @@ public class ExcelCreator {
         cellsPages.clear();
         cellsPercent.clear();
         columnCounter++;
+        resetColorToggle();
         for (Interval totalValue : group.getTotalValues()) {
             cellsTotalPages.putIfAbsent(totalValue.getDate(), new ArrayList<>());
 
