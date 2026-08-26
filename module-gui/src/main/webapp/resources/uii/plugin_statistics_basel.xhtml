@@ -7,20 +7,13 @@
     xmlns:jsf="http://xmlns.jcp.org/jsf"
     xmlns:util="http://goobi.io/util"
     xmlns:form="http://goobi.io/form"
-    xmlns:section="http://goobi.io/section">
+    xmlns:section="http://goobi.io/section"
+    xmlns:util="http://goobi.io/util">
 
     <h:outputStylesheet name="uii/plugin_statistics_basel.css" />
 
     <!-- Permission check -->
-    <h:panelGroup
-        rendered="#{!LoginForm.hasRole('Plugin_statistics_basel')}"
-        styleClass="color-box bg-hot text-white d-flex flex-row p-3">
-        <h:outputText
-            styleClass="fw-bold"
-            value="#{msgs.plugin_administration_missingPermission} Plugin_statistics_basel" />
-    </h:panelGroup>
-
-    <ui:fragment rendered="#{LoginForm.hasRole('Plugin_statistics_basel')}">
+    <util:missing-rights rights="Plugin_statistics_basel">
         <h:form
             id="form"
             onkeypress="submitOnEnter(event);">
@@ -149,5 +142,5 @@
             </h:panelGroup>
 
         </h:form>
-    </ui:fragment>
+    </util:missing-rights>
 </ui:composition>
