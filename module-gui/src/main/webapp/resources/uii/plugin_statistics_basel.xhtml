@@ -7,16 +7,16 @@
     xmlns:jsf="http://xmlns.jcp.org/jsf"
     xmlns:util="http://goobi.io/util"
     xmlns:form="http://goobi.io/form"
-    xmlns:section="http://goobi.io/section"
-    xmlns:util="http://goobi.io/util">
+    xmlns:section="http://goobi.io/section">
 
     <h:outputStylesheet name="uii/plugin_statistics_basel.css" />
 
     <!-- Permission check -->
-    <util:missing-rights rights="Plugin_statistics_basel">
-        <h:form
-            id="form"
-            onkeypress="submitOnEnter(event);">
+    <util:missing-rights rights="Plugin_statistics_basel" />
+    <h:form
+        id="form"
+        rendered="#{LoginForm.hasRole('Plugin_statistics_basel')}"
+        onkeypress="submitOnEnter(event);">
 
             <!-- Filter -->
             <section:section type="action">
@@ -141,6 +141,5 @@
                 </div>
             </h:panelGroup>
 
-        </h:form>
-    </util:missing-rights>
+    </h:form>
 </ui:composition>
