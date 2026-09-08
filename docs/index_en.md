@@ -2,7 +2,7 @@
 title: Basel Statistics
 identifier: intranda_statistics_basel
 description: Statistics plugin for cross-project evaluation of digitisation output grouped by collections or thematic columns
-published: false
+published: true
 keywords:
     - Goobi workflow
     - Plugin

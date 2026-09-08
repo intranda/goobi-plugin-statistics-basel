@@ -2,7 +2,7 @@
 title: Basel Statistiken
 identifier: intranda_statistics_basel
 description: Statistik-Plugin zur projektübergreifenden Auswertung von Digitalisierungsleistungen nach Sammlungen oder thematischen Säulen
-published: false
+published: true
 keywords:
     - Goobi workflow
     - Plugin
