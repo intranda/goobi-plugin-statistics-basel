@@ -18,8 +18,8 @@ Detail                      | Description
 **Plugin identifier**       | intranda_statistics_basel
 **Plugin type**             | statistics
 **Licence**                 | GPL 2.0 or newer
-**Documentation (German)**  | This plugin is not yet documented.
-**Documentation (English)** | This plugin is not yet documented.
+**Documentation (German)**  | https://docs.goobi.io/de/workflow/plugins/statistics/goobi-plugin-statistics-basel
+**Documentation (English)** | https://docs.goobi.io/en/workflow/plugins/statistics/goobi-plugin-statistics-basel
 
 ## Goobi details
 
